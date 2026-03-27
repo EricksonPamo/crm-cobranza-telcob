@@ -1,0 +1,420 @@
+import { useState } from 'react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import { Card, CardContent } from './ui/card';
+import { FileText, Search } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface Deuda {
+  cuenta: string;
+  producto: string;
+  moneda: string;
+  deuda: number;
+  fechaCastigo: string;
+}
+
+interface Acuerdo {
+  cuenta: string;
+  tipoAcuerdo: string;
+  tipificacion: string;
+  montoNegociado: number;
+  cuotas: number;
+  fechaCreacion: string;
+}
+
+interface ClienteProducto {
+  id: string;
+  producto: string;
+  identificacion: string;
+  cuenta: string;
+  nombreCliente: string;
+  deudas: Deuda[];
+  acuerdos: Acuerdo[];
+  mejorGestion: string;
+  ultimaGestion: string;
+  estado: 'activo' | 'inactivo';
+}
+
+// Datos simulados para demostración
+const clientesSimulados: ClienteProducto[] = [
+  {
+    id: '1',
+    producto: 'BCP Castigo',
+    identificacion: '1234567890',
+    cuenta: 'TC-001-2024',
+    nombreCliente: 'Juan Carlos Pérez García',
+    deudas: [
+      { cuenta: 'TC-001-2024', producto: 'Tarjeta Crédito', moneda: 'COP', deuda: 2500000, fechaCastigo: '2026-04-15' },
+      { cuenta: 'TC-001-2024', producto: 'Intereses', moneda: 'COP', deuda: 350000, fechaCastigo: '2026-04-15' },
+    ],
+    acuerdos: [
+      { cuenta: 'TC-001-2024', tipoAcuerdo: 'Promesa de Pago', tipificacion: 'PP-001', montoNegociado: 1000000, cuotas: 3, fechaCreacion: '10/03/2026' },
+    ],
+    mejorGestion: '15/02/2026 - Contacto efectivo',
+    ultimaGestion: '10/03/2026 - Promesa de pago acordada',
+    estado: 'activo',
+  },
+  {
+    id: '2',
+    producto: 'Scotiabank Mora',
+    identificacion: '1234567890',
+    cuenta: 'CP-045-2024',
+    nombreCliente: 'Juan Carlos Pérez García',
+    deudas: [
+      { cuenta: 'CP-045-2024', producto: 'Crédito Personal', moneda: 'COP', deuda: 5800000, fechaCastigo: '2026-05-20' },
+      { cuenta: 'CP-045-2024', producto: 'Mora', moneda: 'COP', deuda: 680000, fechaCastigo: '2026-05-20' },
+    ],
+    acuerdos: [
+      { cuenta: 'CP-045-2024', tipoAcuerdo: 'Convenio de Pago', tipificacion: 'CV-002', montoNegociado: 3000000, cuotas: 6, fechaCreacion: '11/03/2026' },
+      { cuenta: 'CP-045-2024', tipoAcuerdo: 'Descuento', tipificacion: 'DS-001', montoNegociado: 500000, cuotas: 1, fechaCreacion: '05/03/2026' },
+    ],
+    mejorGestion: '20/02/2026 - Negociación exitosa',
+    ultimaGestion: '11/03/2026 - Convenio firmado',
+    estado: 'activo',
+  },
+  {
+    id: '3',
+    producto: 'BBVA Vehicular Premium',
+    identificacion: '0987654321',
+    cuenta: 'CV-123-2024',
+    nombreCliente: 'María Fernanda López Rodríguez',
+    deudas: [
+      { cuenta: 'CV-123-2024', producto: 'Crédito Vehicular', moneda: 'COP', deuda: 12500000, fechaCastigo: '2026-06-25' },
+      { cuenta: 'CV-123-2024', producto: 'Seguros', moneda: 'COP', deuda: 450000, fechaCastigo: '2026-06-25' },
+    ],
+    acuerdos: [],
+    mejorGestion: '01/03/2026 - Cliente comprometido',
+    ultimaGestion: '08/03/2026 - Solicitud prórroga',
+    estado: 'activo',
+  },
+  {
+    id: '4',
+    producto: 'Interbank Tarjetas',
+    identificacion: '5555666677',
+    cuenta: 'TC-789-2023',
+    nombreCliente: 'Carlos Alberto Ramírez Santos',
+    deudas: [
+      { cuenta: 'TC-789-2023', producto: 'Tarjeta Crédito', moneda: 'COP', deuda: 1800000, fechaCastigo: '2026-07-30' },
+    ],
+    acuerdos: [
+      { cuenta: 'TC-789-2023', tipoAcuerdo: 'Promesa de Pago', tipificacion: 'PP-003', montoNegociado: 600000, cuotas: 2, fechaCreacion: '12/03/2026' },
+    ],
+    mejorGestion: '25/02/2026 - Contacto directo',
+    ultimaGestion: '12/03/2026 - Pago parcial realizado',
+    estado: 'inactivo',
+  },
+];
+
+export function Clientes() {
+  const [buscarPor, setBuscarPor] = useState<'identificacion' | 'cuenta' | 'nombre'>('identificacion');
+  const [valorBusqueda, setValorBusqueda] = useState('');
+  const [estadoFiltro, setEstadoFiltro] = useState<'activo' | 'inactivo'>('activo');
+  const [resultados, setResultados] = useState<ClienteProducto[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const handleBuscar = () => {
+    if (!valorBusqueda.trim()) {
+      toast.error('Por favor ingrese un valor de búsqueda');
+      return;
+    }
+
+    // Filtrar clientes según criterios
+    const filtrados = clientesSimulados.filter((cliente) => {
+      // Filtrar por estado
+      if (cliente.estado !== estadoFiltro) return false;
+
+      // Filtrar por criterio de búsqueda
+      const valorLower = valorBusqueda.toLowerCase().trim();
+      
+      switch (buscarPor) {
+        case 'identificacion':
+          return cliente.identificacion.includes(valorBusqueda);
+        case 'cuenta':
+          return cliente.cuenta.toLowerCase().includes(valorLower);
+        case 'nombre':
+          return cliente.nombreCliente.toLowerCase().includes(valorLower);
+        default:
+          return false;
+      }
+    });
+
+    setResultados(filtrados);
+    setHasSearched(true);
+    
+    if (filtrados.length === 0) {
+      toast.info('No se encontraron resultados para la búsqueda');
+    } else {
+      toast.success(`Se encontraron ${filtrados.length} resultado(s)`);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleBuscar();
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const handleGestionar = (cliente: ClienteProducto) => {
+    // Por ahora solo muestra un mensaje, más adelante abrirá la ficha de gestión
+    toast.info(`Abriendo ficha de gestión para ${cliente.cuenta} - Próximamente`);
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+          <FileText className="w-5 h-5 text-blue-600" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
+          <p className="text-sm text-gray-600">Búsqueda y gestión de clientes</p>
+        </div>
+      </div>
+
+      {/* Filtros de búsqueda */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex gap-4 items-end">
+            {/* Contenedor flex para campos izquierdos */}
+            <div className="flex gap-4 items-end flex-1">
+              {/* Buscar por */}
+              <div className="w-48 space-y-2">
+                <Label>Buscar por</Label>
+                <Select value={buscarPor} onValueChange={(value: any) => setBuscarPor(value)}>
+                  <SelectTrigger className="!h-7 !py-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="identificacion">Identificación</SelectItem>
+                    <SelectItem value="cuenta">Cuenta</SelectItem>
+                    <SelectItem value="nombre">Nombre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Valor de búsqueda - Reducido 50% */}
+              <div className="w-64 space-y-2">
+                <Label>Valor</Label>
+                <Input
+                  value={valorBusqueda}
+                  onChange={(e) => setValorBusqueda(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={
+                    buscarPor === 'identificacion' ? 'Ingrese identificación' :
+                    buscarPor === 'cuenta' ? 'Ingrese número de cuenta' :
+                    'Ingrese nombre del cliente'
+                  }
+                  className="h-7 text-xs"
+                />
+              </div>
+
+              {/* Estado */}
+              <div className="w-40 space-y-2">
+                <Label>Estado</Label>
+                <Select value={estadoFiltro} onValueChange={(value: any) => setEstadoFiltro(value)}>
+                  <SelectTrigger className="!h-7 !py-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="activo">Activo</SelectItem>
+                    <SelectItem value="inactivo">Inactivo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Botón Buscar - Fijo a la derecha */}
+            <div className="w-40 shrink-0">
+              <Button onClick={handleBuscar} className="w-full h-7 text-xs">
+                <Search className="w-3 h-3 mr-1" />
+                Buscar
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Resultados */}
+      {hasSearched && (
+        <div className="space-y-4">
+          {resultados.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-gray-500">
+                No se encontraron clientes con los criterios especificados
+              </CardContent>
+            </Card>
+          ) : (
+            resultados.map((cliente, index) => (
+              <Card key={cliente.id} className="border-2 border-gray-300 max-w-[60%]">
+                <CardContent className="p-3">
+                  {/* Encabezado de tarjeta */}
+                  <div className="mb-2 pb-2 border-b-2 border-gray-300">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-gray-700">tarjeta #{index + 1}</h3>
+                      <span className={`px-3 py-1 rounded text-xs font-semibold ${
+                        cliente.estado === 'activo'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {cliente.estado.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    {/* Información básica - Columna izquierda */}
+                    <div className="lg:col-span-3 space-y-1">
+                      <div>
+                        <Label className="text-xs font-semibold text-gray-600">Cargue - Producto</Label>
+                        <div className="h-7 text-xs mt-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm">
+                          {cliente.producto}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold text-gray-600">Identificación</Label>
+                        <div className="h-7 text-xs mt-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm">
+                          {cliente.identificacion}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold text-gray-600">Nombre</Label>
+                        <div className="h-7 text-xs mt-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm">
+                          {cliente.nombreCliente}
+                        </div>
+                      </div>
+
+                      {/* Mejor y última gestión */}
+                      <div className="pt-2 space-y-1">
+                        <div className="px-2 py-1 bg-blue-50 border border-blue-200 rounded">
+                          <div className="text-xs font-semibold text-blue-900">MEJOR GESTIÓN</div>
+                          <div className="text-xs text-blue-800">{cliente.mejorGestion}</div>
+                        </div>
+                        <div className="px-2 py-1 bg-amber-50 border border-amber-200 rounded">
+                          <div className="text-xs font-semibold text-amber-900">ÚLTIMA GESTIÓN</div>
+                          <div className="text-xs text-amber-800">{cliente.ultimaGestion}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tablas - Columna derecha */}
+                    <div className="lg:col-span-9 space-y-2">
+                      {/* Tabla DEUDA */}
+                      <div>
+                        <div className="mb-1">
+                          <h4 className="text-sm font-bold text-gray-700">DEUDA</h4>
+                        </div>
+                        <div className="border-2 border-gray-300 rounded overflow-hidden">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="bg-gray-100 border-b-2 border-gray-300">
+                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">cuenta</th>
+                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">producto</th>
+                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">moneda</th>
+                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">deuda</th>
+                                <th className="px-2 py-1 text-left font-semibold">fecha castigo</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {cliente.deudas.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="px-2 py-2 text-center text-gray-500">
+                                    Sin deudas registradas
+                                  </td>
+                                </tr>
+                              ) : (
+                                cliente.deudas.map((deuda, idx) => (
+                                  <tr key={idx} className="border-b border-gray-200 last:border-0">
+                                    <td className="px-2 py-1 border-r border-gray-200">{deuda.cuenta}</td>
+                                    <td className="px-2 py-1 border-r border-gray-200">{deuda.producto}</td>
+                                    <td className="px-2 py-1 border-r border-gray-200">{deuda.moneda}</td>
+                                    <td className="px-2 py-1 border-r border-gray-200 text-right font-semibold">{formatCurrency(deuda.deuda)}</td>
+                                    <td className="px-2 py-1 text-right font-semibold">{deuda.fechaCastigo}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Tabla ACUERDOS */}
+                      <div>
+                        <div className="mb-1">
+                          <h4 className="text-sm font-bold text-gray-700">ACUERDOS</h4>
+                        </div>
+                        <div className="border-2 border-gray-300 rounded overflow-hidden">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="bg-gray-100 border-b-2 border-gray-300">
+                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">cuenta</th>
+                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">tipo acuerdo</th>
+                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">tipificación</th>
+                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">monto Negociado</th>
+                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">cuotas</th>
+                                <th className="px-2 py-1 text-left font-semibold">fecha Creación</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {cliente.acuerdos.length === 0 ? (
+                                <tr>
+                                  <td colSpan={6} className="px-2 py-2 text-center text-gray-500">
+                                    Sin acuerdos registrados
+                                  </td>
+                                </tr>
+                              ) : (
+                                cliente.acuerdos.map((acuerdo, idx) => (
+                                  <tr key={idx} className="border-b border-gray-200 last:border-0">
+                                    <td className="px-2 py-1 border-r border-gray-200">{acuerdo.cuenta}</td>
+                                    <td className="px-2 py-1 border-r border-gray-200">{acuerdo.tipoAcuerdo}</td>
+                                    <td className="px-2 py-1 border-r border-gray-200">{acuerdo.tipificacion}</td>
+                                    <td className="px-2 py-1 border-r border-gray-200 text-right font-semibold">
+                                      {formatCurrency(acuerdo.montoNegociado)}
+                                    </td>
+                                    <td className="px-2 py-1 border-r border-gray-200 text-center">{acuerdo.cuotas}</td>
+                                    <td className="px-2 py-1 text-center">{acuerdo.fechaCreacion}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Botón GESTIONAR */}
+                      <div className="flex justify-end pt-2">
+                        <Button
+                          onClick={() => handleGestionar(cliente)}
+                          className="bg-gray-700 hover:bg-gray-800 h-7 text-xs"
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          Gestionar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
