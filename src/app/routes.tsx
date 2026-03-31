@@ -7,6 +7,7 @@ import { Clientes } from './components/Clientes';
 import { Cobranza } from './components/Cobranza';
 import { Configuracion } from './components/Configuracion';
 import { ModulePlaceholder } from './components/ModulePlaceholder';
+import { FichaGestion } from './components/cobranza/FichaGestion';
 import { UserCircle, DollarSign, FileText, Calculator } from 'lucide-react';
 import React from 'react';
 
@@ -49,6 +50,10 @@ export const router = createBrowserRouter([
       {
         path: 'cobranza',
         element: <Cobranza />,
+      },
+      {
+        path: 'cobranza/ficha',
+        element: <FichaGestion />,
       },
       {
         path: 'reportes',

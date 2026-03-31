@@ -396,32 +396,32 @@ export function Base() {
                 Nueva Base
               </Button>
             </DialogTrigger>
-            <DialogContent className="text-xs !max-w-[550px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
+            <DialogContent className="text-xs !max-w-[800px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-white">
+              <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
+                <DialogTitle className="text-sm font-bold text-slate-700">
                   {editingBase ? 'Editar Base' : 'Nueva Base'}
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="text-xs text-slate-500">
                   Complete los datos de la base de datos
                 </DialogDescription>
               </DialogHeader>
               <div>
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2 col-span-2">
-                      <Label htmlFor="productoId">Producto *</Label>
+                <form onSubmit={handleSubmit} className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
+                    <div className="space-y-1 col-span-2">
+                      <Label htmlFor="productoId" className="text-xs font-medium text-slate-600">Producto *</Label>
                       <Select
                         value={formData.productoId}
                         onValueChange={(value) =>
                           setFormData({ ...formData, productoId: value })
                         }
                       >
-                        <SelectTrigger className="!h-7 !py-1 text-xs bg-gray-50 w-[35ch]">
+                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-slate-200 focus:border-sky-300 w-[35ch]">
                           <SelectValue placeholder="Seleccione un producto" />
                         </SelectTrigger>
                         <SelectContent>
                           {productosActivos.length === 0 ? (
-                            <div className="p-2 text-sm text-gray-500">
+                            <div className="p-2 text-xs text-slate-400">
                               No hay productos activos disponibles
                             </div>
                           ) : (
@@ -435,8 +435,8 @@ export function Base() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2 col-span-2">
-                      <Label htmlFor="nombreBase">Nombre de la Base *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="nombreBase" className="text-xs font-medium text-slate-600">Nombre de la Base *</Label>
                       <Input
                         id="nombreBase"
                         value={formData.nombreBase}
@@ -444,13 +444,13 @@ export function Base() {
                           setFormData({ ...formData, nombreBase: e.target.value })
                         }
                         placeholder="Ej: Base de Marzo 2026"
-                        className="h-7 text-xs bg-gray-50 w-[35ch]"
+                        className="h-7 text-xs border-slate-200 focus:border-sky-300"
                         required
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="alias">Alias *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="alias" className="text-xs font-medium text-slate-600">Alias *</Label>
                       <Input
                         id="alias"
                         value={formData.alias}
@@ -458,20 +458,20 @@ export function Base() {
                           setFormData({ ...formData, alias: e.target.value })
                         }
                         placeholder="Ej: BCPMar2026"
-                        className="h-7 text-xs bg-gray-50 w-[35ch]"
+                        className="h-7 text-xs border-slate-200 focus:border-sky-300"
                         required
                       />
                     </div>
 
-                    <div className="space-y-2 justify-self-end">
-                      <Label htmlFor="cargueGestionar">Cargue Gestionar *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="cargueGestionar" className="text-xs font-medium text-slate-600">Cargue Gestionar *</Label>
                       <Select
                         value={formData.cargueGestionar}
                         onValueChange={(value) =>
                           setFormData({ ...formData, cargueGestionar: value })
                         }
                       >
-                        <SelectTrigger className="!h-7 !py-1 text-xs bg-gray-50 w-[15ch]">
+                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-slate-200 focus:border-sky-300 w-[15ch]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -486,8 +486,8 @@ export function Base() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="maximoCuotas">Máximo de Cuotas *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="maximoCuotas" className="text-xs font-medium text-slate-600">Máximo de Cuotas *</Label>
                       <Input
                         id="maximoCuotas"
                         type="number"
@@ -499,20 +499,20 @@ export function Base() {
                             maximoCuotas: parseInt(e.target.value),
                           })
                         }
-                        className="h-7 text-xs bg-gray-50 w-[10ch]"
+                        className="h-7 text-xs border-slate-200 focus:border-sky-300 w-[10ch]"
                         required
                       />
                     </div>
 
-                    <div className="space-y-2 justify-self-end">
-                      <Label htmlFor="estado">Estado *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="estado" className="text-xs font-medium text-slate-600">Estado *</Label>
                       <Select
                         value={formData.estado}
                         onValueChange={(value) =>
                           setFormData({ ...formData, estado: value as 'activo' | 'inactivo' })
                         }
                       >
-                        <SelectTrigger className="!h-7 !py-1 text-xs bg-gray-50 w-[15ch]">
+                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-slate-200 focus:border-sky-300 w-[15ch]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -523,23 +523,23 @@ export function Base() {
                     </div>
 
                     {!editingBase && (
-                      <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-xs text-blue-800">
-                          <strong>Nota:</strong> El cdigo de la base se generará automáticamente.
+                      <div className="col-span-2 bg-sky-50 border-2 border-sky-200 rounded-lg p-2">
+                        <p className="text-xs text-sky-700">
+                          <strong>Nota:</strong> El código de la base se generará automáticamente.
                         </p>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button type="submit" className="!h-7 bg-black hover:bg-gray-800 text-white px-8">
+                  <div className="flex gap-2 pt-2 border-t border-slate-200">
+                    <Button type="submit" className="!h-7 bg-black hover:bg-gray-800 text-white px-8 text-xs">
                       {editingBase ? 'Actualizar' : 'Crear Base'}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={resetForm}
-                      className="!h-7 px-8"
+                      className="!h-7 px-8 text-xs border-slate-200"
                     >
                       Cancelar
                     </Button>

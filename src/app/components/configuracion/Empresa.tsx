@@ -296,39 +296,39 @@ export function Empresa() {
                 Nueva Empresa
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-white">
+              <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
+                <DialogTitle className="text-sm font-bold text-slate-700">
                   {editingEmpresa ? 'Editar Empresa' : 'Nueva Empresa'}
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="text-xs text-slate-500">
                   Complete los datos de la empresa
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <form onSubmit={handleSubmit} className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
                   {/* Logo Upload */}
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="logo">Logo de la Empresa</Label>
-                    <div className="flex gap-4 items-start">
+                  <div className="space-y-1 md:col-span-2">
+                    <Label htmlFor="logo" className="text-xs font-medium text-slate-600">Logo de la Empresa</Label>
+                    <div className="flex gap-3 items-start">
                       {logoPreview ? (
                         <div className="relative">
                           <img
                             src={logoPreview}
                             alt="Logo preview"
-                            className="w-24 h-24 object-contain border-2 border-gray-200 rounded-lg bg-white p-2"
+                            className="w-20 h-20 object-contain border-2 border-slate-200 rounded-lg bg-white p-1"
                           />
                           <button
                             type="button"
                             onClick={removeLogo}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                            className="absolute -top-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 hover:bg-rose-600"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3 h-3" />
                           </button>
                         </div>
                       ) : (
-                        <div className="h-7 text-xs w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                          <Upload className="w-8 h-8 text-gray-400" />
+                        <div className="w-20 h-20 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center bg-slate-50">
+                          <Upload className="w-6 h-6 text-slate-400" />
                         </div>
                       )}
                       <div className="flex-1">
@@ -344,80 +344,81 @@ export function Empresa() {
                           type="button"
                           variant="outline"
                           onClick={() => fileInputRef.current?.click()}
+                          className="h-7 text-xs"
                         >
-                          <Upload className="w-4 h-4 mr-2" />
+                          <Upload className="w-3 h-3 mr-1" />
                           Seleccionar Logo
                         </Button>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Formatos: PNG, JPG, SVG. Tamaño máximo: 2MB
+                        <p className="text-xs text-slate-400 mt-1">
+                          Formatos: PNG, JPG, SVG. Máx: 2MB
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="razonSocial">Razón Social *</Label>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label htmlFor="razonSocial" className="text-xs font-medium text-slate-600">Razón Social *</Label>
                     <Input
                       id="razonSocial"
                       value={formData.razonSocial}
                       onChange={(e) => handleChange('razonSocial', e.target.value)}
                       required
-                      className="h-7 text-sm"
+                      className="h-7 text-xs border-slate-200 focus:border-sky-300"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="ruc">RUC *</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="ruc" className="text-xs font-medium text-slate-600">RUC *</Label>
                     <Input
                       id="ruc"
                       value={formData.ruc}
                       onChange={(e) => handleChange('ruc', e.target.value)}
                       required
-                      className="h-7 text-sm"
+                      className="h-7 text-xs border-slate-200 focus:border-sky-300"
                     />
                   </div>
 
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="direccion">Dirección *</Label>
-                    <Input
-                      id="direccion"
-                      value={formData.direccion}
-                      onChange={(e) => handleChange('direccion', e.target.value)}
-                      required
-                      className="h-7 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="telefono">Teléfono *</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="telefono" className="text-xs font-medium text-slate-600">Teléfono *</Label>
                     <Input
                       id="telefono"
                       value={formData.telefono}
                       onChange={(e) => handleChange('telefono', e.target.value)}
                       required
-                      className="h-7 text-sm"
+                      className="h-7 text-xs border-slate-200 focus:border-sky-300"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label htmlFor="direccion" className="text-xs font-medium text-slate-600">Dirección *</Label>
+                    <Input
+                      id="direccion"
+                      value={formData.direccion}
+                      onChange={(e) => handleChange('direccion', e.target.value)}
+                      required
+                      className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="email" className="text-xs font-medium text-slate-600">Email *</Label>
                     <Input
                       id="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => handleChange('email', e.target.value)}
                       required
-                      className="h-7 text-sm"
+                      className="h-7 text-xs border-slate-200 focus:border-sky-300"
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="estado">Estado *</Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="estado" className="text-xs font-medium text-slate-600">Estado *</Label>
                     <Select
                       value={formData.estado}
                       onValueChange={(value) => handleChange('estado', value)}
                     >
-                      <SelectTrigger className="!h-7 !py-1 text-sm w-32">
+                      <SelectTrigger className="!h-7 !py-0.5 text-xs border-slate-200 focus:border-sky-300 w-32">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -427,27 +428,28 @@ export function Empresa() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="descripcion">Descripción</Label>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label htmlFor="descripcion" className="text-xs font-medium text-slate-600">Descripción</Label>
                     <Textarea
                       id="descripcion"
                       value={formData.descripcion}
                       onChange={(e) => handleChange('descripcion', e.target.value)}
-                      rows={3}
+                      rows={2}
                       placeholder="Descripción breve de la empresa..."
+                      className="text-xs border-slate-200 focus:border-sky-300"
                     />
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2">
-                  <Button type="submit" className="flex-1 !h-7">
+                <div className="flex gap-2 pt-2 border-t border-slate-200">
+                  <Button type="submit" className="flex-1 h-7 bg-black hover:bg-gray-800 text-white text-xs">
                     {editingEmpresa ? 'Actualizar' : 'Crear Empresa'}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={resetForm}
-                    className="flex-1 !h-7"
+                    className="flex-1 h-7 text-xs border-slate-200"
                   >
                     Cancelar
                   </Button>

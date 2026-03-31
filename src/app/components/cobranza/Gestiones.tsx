@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Textarea } from '../ui/textarea';
-import { Search, ChevronLeft, ChevronRight, ChevronDown, Eye } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronDown, Eye, User, FileText } from 'lucide-react';
 
 // Tipos de datos
 interface Gestion {
@@ -736,119 +736,90 @@ export function Gestiones() {
       {/* Modal de detalle */}
       <Dialog open={modalDetalleAbierto} onOpenChange={setModalDetalleAbierto}>
         <DialogContent
-          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          className="text-xs max-w-lg w-full max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-white"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Detalle de Gestión</DialogTitle>
-            <DialogDescription className="text-sm text-gray-500">
+          <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
+            <DialogTitle className="text-lg font-bold text-slate-700">Detalle de Gestión</DialogTitle>
+            <DialogDescription className="text-sm text-slate-500">
               Información completa de la gestión realizada
             </DialogDescription>
           </DialogHeader>
           <div>
             {gestionSeleccionada && (
-              <div className="space-y-3 py-2">
-                {/* Información en dos columnas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Producto</Label>
-                    <Input
-                      value={gestionSeleccionada.producto}
-                      readOnly
-                      className="bg-gray-50 border-gray-300 h-7 text-xs"
-                    />
+              <div className="space-y-2 px-1">
+                {/* Información del Cliente */}
+                <div className="bg-sky-50 rounded-lg p-2 border-2 border-sky-300">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <User className="w-4 h-4 text-sky-500" />
+                    <h3 className="text-sm font-bold text-slate-600">Información del Cliente</h3>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Identificación</Label>
-                    <Input
-                      value={gestionSeleccionada.identificacion}
-                      readOnly
-                      className="bg-gray-50 border-gray-300 h-7 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Cuenta</Label>
-                    <Input
-                      value={gestionSeleccionada.cuenta}
-                      readOnly
-                      className="bg-gray-50 border-gray-300 h-7 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Nombre</Label>
-                    <Input
-                      value={gestionSeleccionada.nombre}
-                      readOnly
-                      className="bg-gray-50 border-gray-300 h-7 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Teléfono</Label>
-                    <Input
-                      value={gestionSeleccionada.telefono}
-                      readOnly
-                      className="bg-gray-50 border-gray-300 h-7 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Tipo Contacto</Label>
-                    <Input
-                      value={gestionSeleccionada.tipoContacto}
-                      readOnly
-                      className="bg-gray-50 border-gray-300 h-7 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Tipificación</Label>
-                    <Input
-                      value={gestionSeleccionada.tipificacion}
-                      readOnly
-                      className="bg-gray-50 border-gray-300 h-7 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Monto Acuerdo</Label>
-                    <Input
-                      value={gestionSeleccionada.montoAcuerdo > 0 ? formatearMoneda(gestionSeleccionada.montoAcuerdo) : '-'}
-                      readOnly
-                      className="bg-gray-50 border-gray-300 h-7 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Cuotas</Label>
-                    <Input
-                      value={gestionSeleccionada.cuotas > 0 ? gestionSeleccionada.cuotas.toString() : '-'}
-                      readOnly
-                      className="bg-gray-50 border-gray-300 h-7 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Fecha Gestión</Label>
-                    <Input
-                      value={formatearFecha(gestionSeleccionada.fechaGestion)}
-                      readOnly
-                      className="h-7 text-xs bg-gray-50 border-gray-300"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium text-gray-700">Agente</Label>
-                    <Input
-                      value={gestionSeleccionada.agente}
-                      readOnly
-                      className="h-7 text-xs bg-gray-50 border-gray-300"
-                    />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Producto</Label>
+                      <Input value={gestionSeleccionada.producto} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Identificación</Label>
+                      <Input value={gestionSeleccionada.identificacion} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Cuenta</Label>
+                      <Input value={gestionSeleccionada.cuenta} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Nombre</Label>
+                      <Input value={gestionSeleccionada.nombre} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Teléfono</Label>
+                      <Input value={gestionSeleccionada.telefono} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Tipo Contacto</Label>
+                      <Input value={gestionSeleccionada.tipoContacto} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Tipificación</Label>
+                      <Input value={gestionSeleccionada.tipificacion} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Monto Acuerdo</Label>
+                      <Input value={gestionSeleccionada.montoAcuerdo > 0 ? formatearMoneda(gestionSeleccionada.montoAcuerdo) : '-'} readOnly className="bg-emerald-50 border-emerald-200 text-xs h-7 flex-1 font-semibold text-emerald-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Cuotas</Label>
+                      <Input value={gestionSeleccionada.cuotas > 0 ? gestionSeleccionada.cuotas.toString() : '-'} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Fecha Gestión</Label>
+                      <Input value={formatearFecha(gestionSeleccionada.fechaGestion)} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="w-36 text-xs font-medium text-slate-500 shrink-0">Agente</Label>
+                      <Input value={gestionSeleccionada.agente} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+                    </div>
                   </div>
                 </div>
 
-                {/* Observación en toda la parte inferior */}
-                <div className="space-y-1.5 border-t pt-4">
-                  <Label className="text-sm font-medium text-gray-700">Observación</Label>
+                {/* Observación */}
+                <div className="bg-white rounded-lg p-2 border-2 border-slate-300 space-y-1">
+                  <Label className="text-xs font-medium text-slate-600 flex items-center gap-1">
+                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                    Observación
+                  </Label>
                   <Textarea
                     value={gestionSeleccionada.observacion}
                     readOnly
-                    className="h-7 text-xs bg-gray-50 border-gray-300 min-h-[120px] resize-none"
-                    rows={5}
+                    className="min-h-[80px] text-xs border-slate-200 focus:border-sky-300 bg-slate-50"
                   />
+                </div>
+
+                {/* Botón cerrar */}
+                <div className="flex justify-end pt-2 border-t border-slate-200">
+                  <Button onClick={() => setModalDetalleAbierto(false)} className="px-6 h-7 bg-black text-white hover:bg-gray-800">
+                    CERRAR
+                  </Button>
                 </div>
               </div>
             )}

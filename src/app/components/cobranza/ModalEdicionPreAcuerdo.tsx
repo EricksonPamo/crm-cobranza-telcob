@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Textarea } from '../ui/textarea';
-import { Calendar, Upload, Plus } from 'lucide-react';
+import { Calendar, Upload, Plus, User, CreditCard, TrendingUp, FileText, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PreAcuerdo {
@@ -327,153 +327,177 @@ export function ModalEdicionPreAcuerdo({ open, onOpenChange, preAcuerdo }: Modal
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[85vw] w-[910px] max-h-[90vh] overflow-y-auto sm:max-w-[85vw]"
+        className="text-xs max-w-[85vw] w-[910px] max-h-[90vh] overflow-y-auto sm:max-w-[85vw] bg-gradient-to-br from-slate-50 to-white"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold">Editar Pre-Acuerdo</DialogTitle>
+        <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
+          <DialogTitle className="text-lg font-bold text-slate-700">Editar Pre-Acuerdo</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 px-2">
-          {/* Información básica del cliente - 2 columnas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-            <div className="flex items-center gap-3">
-              <Label className="w-32 text-sm font-semibold shrink-0 text-right">Identificación</Label>
-              <Input value={preAcuerdo.identificacion} readOnly className="h-7 text-xs bg-gray-100 flex-1" />
+        <div className="space-y-2 px-1">
+          {/* Información básica del cliente */}
+          <div className="bg-sky-50 rounded-lg p-2 border-2 border-sky-300">
+            <div className="flex items-center gap-2 mb-1">
+              <User className="w-4 h-4 text-sky-500" />
+              <h3 className="text-sm font-bold text-slate-600">Información del Cliente</h3>
             </div>
-            <div className="flex items-center gap-3">
-              <Label className="w-28 text-sm font-semibold shrink-0 text-right">Nombre</Label>
-              <Input value={preAcuerdo.nombre} readOnly className="h-7 text-xs bg-gray-100 flex-1" />
-            </div>
-            <div className="flex items-center gap-3">
-              <Label className="w-32 text-sm font-semibold shrink-0 text-right">Producto</Label>
-              <Input value={preAcuerdo.producto} readOnly className="h-7 text-xs bg-gray-100 flex-1" />
-            </div>
-            <div className="flex items-center gap-3">
-              <Label className="w-28 text-sm font-semibold shrink-0 text-right">Moneda</Label>
-              <Input value={preAcuerdo.moneda || 'COP'} readOnly className="h-7 text-xs bg-gray-100 w-24" />
-            </div>
-            <div className="flex items-center gap-3">
-              <Label className="w-32 text-sm font-semibold shrink-0 text-right">Deuda Total</Label>
-              <Input value={formatearMoneda(preAcuerdo.deudaTotal || 12500)} readOnly className="h-7 text-xs bg-gray-100 w-32" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5">
+              <div className="flex items-center gap-2">
+                <Label className="w-24 text-xs font-medium text-slate-500 shrink-0">Identificación</Label>
+                <Input value={preAcuerdo.identificacion} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="w-20 text-xs font-medium text-slate-500 shrink-0">Nombre</Label>
+                <Input value={preAcuerdo.nombre} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="w-20 text-xs font-medium text-slate-500 shrink-0">Producto</Label>
+                <Input value={preAcuerdo.producto} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="w-20 text-xs font-medium text-slate-500 shrink-0">Moneda</Label>
+                <Input value={preAcuerdo.moneda || 'COP'} readOnly className="bg-white border-slate-200 text-xs h-7 w-24 font-medium text-slate-600" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="w-24 text-xs font-medium text-slate-500 shrink-0">Deuda Total</Label>
+                <Input value={formatearMoneda(preAcuerdo.deudaTotal || 12500)} readOnly className="bg-emerald-50 border-emerald-200 text-xs h-7 w-32 font-semibold text-emerald-600" />
+              </div>
             </div>
           </div>
 
           {/* Acuerdo(s) Vigente(s) */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold">Acuerdo(s) Vigente(s)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-              <div className="flex items-center gap-3">
-                <Label className="w-32 text-sm font-semibold shrink-0 text-right">Cuenta</Label>
-                <Input value={preAcuerdo.cuenta} readOnly className="h-7 text-xs bg-gray-100 flex-1" />
+          <div className="bg-violet-50 rounded-lg p-2 border-2 border-violet-300">
+            <div className="flex items-center gap-2 mb-1">
+              <CreditCard className="w-4 h-4 text-violet-400" />
+              <h3 className="text-sm font-bold text-slate-600">Acuerdo Vigente</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5">
+              <div className="flex items-center gap-2">
+                <Label className="w-24 text-xs font-medium text-slate-500 shrink-0">Cuenta</Label>
+                <Input value={preAcuerdo.cuenta} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
               </div>
-              <div className="flex items-center gap-3">
-                <Label className="w-28 text-sm font-semibold shrink-0 text-right">Estado</Label>
-                <Input value={preAcuerdo.estado} readOnly className="h-7 text-xs bg-gray-100 w-32" />
+              <div className="flex items-center gap-2">
+                <Label className="w-20 text-xs font-medium text-slate-500 shrink-0">Estado</Label>
+                <Input value={preAcuerdo.estado} readOnly className="bg-white border-slate-200 text-xs h-7 w-32 font-medium text-slate-600" />
               </div>
-              <div className="flex items-center gap-3">
-                <Label className="w-32 text-sm font-semibold shrink-0 text-right">Tipificación</Label>
-                <Input value={preAcuerdo.tipificacion} readOnly className="h-7 text-xs bg-gray-100 flex-1" />
+              <div className="flex items-center gap-2">
+                <Label className="w-24 text-xs font-medium text-slate-500 shrink-0">Tipificación</Label>
+                <Input value={preAcuerdo.tipificacion} readOnly className="bg-white border-slate-200 text-xs h-7 flex-1 font-medium text-slate-600" />
               </div>
-              <div className="flex items-center gap-3">
-                <Label className="w-28 text-sm font-semibold shrink-0 text-right">Fecha Creación</Label>
-                <Input value={formatearFecha(preAcuerdo.fechaCreacion)} readOnly className="h-7 text-xs bg-gray-100 w-32" />
+              <div className="flex items-center gap-2">
+                <Label className="w-24 text-xs font-medium text-slate-500 shrink-0">Fecha Creación</Label>
+                <Input value={formatearFecha(preAcuerdo.fechaCreacion)} readOnly className="bg-white border-slate-200 text-xs h-7 w-32 font-medium text-slate-600" />
               </div>
             </div>
 
             {/* Tabla de cuotas */}
-            <div className="mt-3">
-              <table className="w-full border-2 border-gray-400 text-sm">
-                <thead>
-                  <tr className="bg-gray-200">
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Nro Cuota</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Monto Cuota</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Fecha Compromiso</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Pago</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Estado</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cuotas.map((cuota, index) => {
-                    const numReprogramaciones = contarReprogramaciones(cuota.nroCuota);
-                    const puedeReprogramar = cuota.estado === 'Pendiente' && numReprogramaciones < 2;
-                    
-                    return (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="border border-gray-300 px-2 py-1 text-center text-blue-600 font-semibold">{cuota.nroCuota}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-right">{formatearMoneda(cuota.montoCuota)}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-center">{formatearFecha(cuota.fechaCompromiso)}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-right">{formatearMoneda(cuota.pago)}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-center">{cuota.estado}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-center">
-                          {puedeReprogramar ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReprogramarCuota(cuota)}
-                              className="h-7 px-2 text-blue-600 hover:text-blue-800"
-                            >
-                              <Calendar className="w-4 h-4" />
-                            </Button>
-                          ) : numReprogramaciones === 2 ? (
-                            <span className="text-xs text-gray-400">Límite alcanzado</span>
-                          ) : null}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  <tr className="bg-gray-100 font-bold">
-                    <td className="border border-gray-400 px-2 py-1 text-right">Total</td>
-                    <td className="border border-gray-400 px-2 py-1 text-right">{formatearMoneda(calcularTotal())}</td>
-                    <td className="border border-gray-400 px-2 py-1"></td>
-                    <td className="border border-gray-400 px-2 py-1"></td>
-                    <td className="border border-gray-400 px-2 py-1"></td>
-                    <td className="border border-gray-400 px-2 py-1"></td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="mt-2">
+              <div className="bg-white rounded-lg border-2 border-violet-300 overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-violet-100 text-violet-700">
+                      <th className="px-2 py-1 font-semibold text-center">Nro Cuota</th>
+                      <th className="px-2 py-1 font-semibold text-right">Monto Cuota</th>
+                      <th className="px-2 py-1 font-semibold text-center">Fecha Compromiso</th>
+                      <th className="px-2 py-1 font-semibold text-right">Pago</th>
+                      <th className="px-2 py-1 font-semibold text-center">Estado</th>
+                      <th className="px-2 py-1 font-semibold text-center">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cuotas.map((cuota, index) => {
+                      const numReprogramaciones = contarReprogramaciones(cuota.nroCuota);
+                      const puedeReprogramar = cuota.estado === 'Pendiente' && numReprogramaciones < 2;
+
+                      return (
+                        <tr key={index} className={index % 2 === 0 ? 'bg-white hover:bg-violet-50' : 'bg-violet-50/50 hover:bg-violet-50'}>
+                          <td className="border-t border-violet-100 px-2 py-1 text-center">
+                            <span className="inline-flex items-center justify-center w-8 h-5 rounded-md bg-sky-100 text-sky-600 text-xs font-semibold">
+                              {cuota.nroCuota}
+                            </span>
+                          </td>
+                          <td className="border-t border-violet-100 px-2 py-1 text-right font-medium text-slate-600">{formatearMoneda(cuota.montoCuota)}</td>
+                          <td className="border-t border-violet-100 px-2 py-1 text-center text-slate-500">{formatearFecha(cuota.fechaCompromiso)}</td>
+                          <td className="border-t border-violet-100 px-2 py-1 text-right font-medium text-emerald-500">{formatearMoneda(cuota.pago)}</td>
+                          <td className="border-t border-violet-100 px-2 py-1 text-center">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              cuota.estado === 'Pagado'
+                                ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
+                                : cuota.estado === 'Parcial'
+                                  ? 'bg-amber-100 text-amber-600 border border-amber-200'
+                                  : 'bg-rose-100 text-rose-500 border border-rose-200'
+                            }`}>
+                              {cuota.estado}
+                            </span>
+                          </td>
+                          <td className="border-t border-violet-100 px-2 py-1 text-center">
+                            {puedeReprogramar ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReprogramarCuota(cuota)}
+                                className="h-6 px-1.5 text-violet-400 hover:text-violet-500 hover:bg-violet-50"
+                              >
+                                <Calendar className="w-3.5 h-3.5" />
+                              </Button>
+                            ) : numReprogramaciones === 2 ? (
+                              <span className="text-xs text-slate-400">Límite</span>
+                            ) : null}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="bg-slate-50 font-bold">
+                      <td className="border-t-2 border-violet-200 px-2 py-1 text-right text-xs font-bold text-slate-600">Total</td>
+                      <td className="border-t-2 border-violet-200 px-2 py-1 text-right font-bold text-slate-700">{formatearMoneda(calcularTotal())}</td>
+                      <td className="border-t-2 border-violet-200 px-2 py-1" colSpan={4}></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
           {/* Modal inline para reprogramación */}
           {cuotaReprogramando && (
-            <div className="p-3 bg-blue-50 border-2 border-blue-300 rounded space-y-3">
+            <div className="p-2 bg-violet-50 border-2 border-violet-300 rounded-lg space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-blue-900">
-                  Reprogramar Cuota {cuotaReprogramando} - Monto Original: {formatearMoneda(montoCuotaOriginal)}
+                <h4 className="text-xs font-bold text-slate-600 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-violet-400" />
+                  Reprogramar Cuota {cuotaReprogramando} - Monto Original:
+                  <span className="text-violet-500">{formatearMoneda(montoCuotaOriginal)}</span>
                 </h4>
                 {reprogramacionesTmp.length < 2 && (
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={agregarReprogramacion}
-                    className="h-7 gap-1 text-xs"
+                    className="h-6 gap-1 text-xs border-violet-200 text-violet-500 hover:bg-violet-100"
                   >
                     <Plus className="w-3 h-3" />
-                    Agregar Reprogramación
+                    Agregar
                   </Button>
                 )}
               </div>
 
               {reprogramacionesTmp.map((reprog, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded border border-blue-200">
-                  <span className="text-xs font-semibold text-blue-900 w-24">Reprog. {index + 1}:</span>
-                  <Label className="text-xs font-semibold shrink-0">Fecha</Label>
+                <div key={index} className="flex items-center gap-2 p-2 bg-white rounded-lg border-2 border-violet-200">
+                  <span className="text-xs font-medium text-violet-500 w-16 px-2 py-0.5 bg-violet-50 rounded">Reprog. {index + 1}</span>
+                  <Label className="text-xs font-medium shrink-0 text-slate-500">Fecha</Label>
                   <Input
                     type="date"
                     value={reprog.fecha}
                     onChange={(e) => actualizarReprogramacionTmp(index, 'fecha', e.target.value)}
-                    className="w-40 h-7 text-xs"
+                    className="w-32 h-7 text-xs border-slate-200 focus:border-violet-300"
                     min={fechaMinReprog}
                     max={fechaMaxReprog}
                   />
-                  <Label className="text-xs font-semibold shrink-0">Monto</Label>
+                  <Label className="text-xs font-medium shrink-0 text-slate-500">Monto</Label>
                   <Input
                     type="number"
                     value={reprog.monto}
                     onChange={(e) => actualizarReprogramacionTmp(index, 'monto', e.target.value)}
-                    className="w-32 h-7 text-xs"
+                    className="w-24 h-7 text-xs border-slate-200 focus:border-violet-300"
                     placeholder="0"
                   />
                   {reprogramacionesTmp.length > 1 && (
@@ -481,7 +505,7 @@ export function ModalEdicionPreAcuerdo({ open, onOpenChange, preAcuerdo }: Modal
                       size="sm"
                       variant="ghost"
                       onClick={() => eliminarReprogramacionTmp(index)}
-                      className="h-7 px-2 text-red-600 hover:text-red-800"
+                      className="h-6 px-1.5 text-rose-400 hover:text-rose-500 hover:bg-rose-50"
                     >
                       ✕
                     </Button>
@@ -489,15 +513,15 @@ export function ModalEdicionPreAcuerdo({ open, onOpenChange, preAcuerdo }: Modal
                 </div>
               ))}
 
-              <div className="flex items-center gap-2 pt-2 border-t border-blue-200">
-                <span className="text-xs font-semibold text-blue-900">
-                  Total Reprogramaciones: {formatearMoneda(reprogramacionesTmp.reduce((sum, r) => sum + parseFloat(r.monto || '0'), 0))}
+              <div className="flex items-center gap-2 pt-2 border-t border-violet-200">
+                <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                  Total: {formatearMoneda(reprogramacionesTmp.reduce((sum, r) => sum + parseFloat(r.monto || '0'), 0))}
                 </span>
                 <div className="flex-1"></div>
-                <Button size="sm" onClick={confirmarReprogramacion} className="h-7 px-4 bg-blue-600 hover:bg-blue-700">
+                <Button size="sm" onClick={confirmarReprogramacion} className="h-7 px-4 bg-violet-100 hover:bg-violet-200 text-violet-600">
                   Confirmar
                 </Button>
-                <Button size="sm" variant="outline" onClick={cancelarReprogramacion} className="h-7 px-4">
+                <Button size="sm" variant="outline" onClick={cancelarReprogramacion} className="h-7 px-4 border-slate-200 text-slate-500">
                   Cancelar
                 </Button>
               </div>
@@ -505,36 +529,53 @@ export function ModalEdicionPreAcuerdo({ open, onOpenChange, preAcuerdo }: Modal
           )}
 
           {/* Reprogramación Cuota(s) */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-bold">Reprogramación Cuota(s)</h3>
-            <div>
-              <table className="w-full border-2 border-gray-400 text-sm">
+          <div className="bg-slate-200 rounded-lg p-2 border-2 border-slate-400">
+            <div className="flex items-center gap-1 mb-1">
+              <TrendingUp className="w-3.5 h-3.5 text-slate-600" />
+              <h3 className="text-xs font-bold text-slate-700">Reprogramación Cuota(s)</h3>
+            </div>
+            <div className="bg-white rounded-lg border-2 border-slate-300 overflow-hidden">
+              <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-gray-200">
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Nro Cuota</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Nro Reprog</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Monto Cuota</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Fecha Compromiso</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Pago</th>
-                    <th className="border border-gray-400 px-2 py-1.5 font-semibold">Estado</th>
+                  <tr className="bg-slate-300 text-slate-800">
+                    <th className="px-2 py-1 font-medium text-center">Nro Cuota</th>
+                    <th className="px-2 py-1 font-medium text-center">Nro Reprog</th>
+                    <th className="px-2 py-1 font-medium text-right">Monto Cuota</th>
+                    <th className="px-2 py-1 font-medium text-center">Fecha Compromiso</th>
+                    <th className="px-2 py-1 font-medium text-right">Pago</th>
+                    <th className="px-2 py-1 font-medium text-center">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {reprogramaciones.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="h-7 text-xs border border-gray-300 px-2 py-3 text-center text-gray-500 bg-gray-50">
+                      <td colSpan={6} className="h-8 text-xs border border-slate-200 px-2 py-2 text-center text-slate-500 bg-slate-100/30">
                         No hay reprogramaciones
                       </td>
                     </tr>
                   ) : (
                     reprogramaciones.map((reprog, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="border border-gray-300 px-2 py-1 text-center text-blue-600 font-semibold">{reprog.nroCuota}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-center font-semibold">{reprog.numeroReprogramacion}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-right">{formatearMoneda(reprog.montoCuota)}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-center">{formatearFecha(reprog.fechaCompromiso)}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-right">{formatearMoneda(reprog.pago)}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-center">{reprog.estado}</td>
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white hover:bg-slate-100' : 'bg-slate-100/50 hover:bg-slate-100'}>
+                        <td className="border-t border-slate-200 px-2 py-1 text-center">
+                          <span className="inline-flex items-center justify-center w-8 h-5 rounded-md bg-sky-100 text-sky-600 text-xs font-medium">
+                            {reprog.nroCuota}
+                          </span>
+                        </td>
+                        <td className="border-t border-slate-200 px-2 py-1 text-center font-medium text-slate-600">{reprog.numeroReprogramacion}</td>
+                        <td className="border-t border-slate-200 px-2 py-1 text-right font-medium text-slate-600">{formatearMoneda(reprog.montoCuota)}</td>
+                        <td className="border-t border-slate-200 px-2 py-1 text-center text-slate-500">{formatearFecha(reprog.fechaCompromiso)}</td>
+                        <td className="border-t border-slate-200 px-2 py-1 text-right font-medium text-emerald-500">{formatearMoneda(reprog.pago)}</td>
+                        <td className="border-t border-slate-200 px-2 py-1 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            reprog.estado === 'Pagado'
+                              ? 'bg-emerald-100 text-emerald-500 border border-emerald-200'
+                              : reprog.estado === 'Parcial'
+                                ? 'bg-amber-100 text-amber-600 border border-amber-200'
+                                : 'bg-rose-100 text-rose-500 border border-rose-200'
+                          }`}>
+                            {reprog.estado}
+                          </span>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -544,13 +585,16 @@ export function ModalEdicionPreAcuerdo({ open, onOpenChange, preAcuerdo }: Modal
           </div>
 
           {/* Adjuntar Documento(s) */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold">Adjuntar Documento(s)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3">
-                <Label className="w-32 text-sm font-semibold shrink-0">Tipo Documento</Label>
+          <div className="bg-white rounded-lg p-2 border-2 border-slate-300 space-y-1">
+            <Label className="text-xs font-medium text-slate-600 flex items-center gap-1">
+              <FileText className="w-3.5 h-3.5 text-slate-400" />
+              Adjuntar Documento(s)
+            </Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
+              <div className="flex items-center gap-2">
+                <Label className="w-28 text-xs font-medium text-slate-500 shrink-0">Tipo Documento</Label>
                 <Select value={tipoDocumento} onValueChange={setTipoDocumento}>
-                  <SelectTrigger className="!h-7 !py-1 text-xs w-44">
+                  <SelectTrigger className="!h-7 !py-0.5 text-xs w-44 bg-white border-slate-200 focus:border-sky-300">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -560,8 +604,8 @@ export function ModalEdicionPreAcuerdo({ open, onOpenChange, preAcuerdo }: Modal
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-3">
-                <Label className="w-20 text-sm font-semibold shrink-0">Adjunto</Label>
+              <div className="flex items-center gap-2">
+                <Label className="w-16 text-xs font-medium text-slate-500 shrink-0">Adjunto</Label>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -572,7 +616,7 @@ export function ModalEdicionPreAcuerdo({ open, onOpenChange, preAcuerdo }: Modal
                   variant="outline"
                   size="sm"
                   onClick={handleAdjuntarArchivo}
-                  className="h-8 gap-2"
+                  className="h-7 gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
                 >
                   <Upload className="w-4 h-4" />
                   {archivoAdjunto ? archivoAdjunto.name : 'Adjuntar Archivo'}
@@ -582,37 +626,44 @@ export function ModalEdicionPreAcuerdo({ open, onOpenChange, preAcuerdo }: Modal
           </div>
 
           {/* Comentario */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Comentario</Label>
+          <div className="bg-white rounded-lg p-2 border-2 border-slate-300 space-y-1">
+            <Label className="text-xs font-medium text-slate-600">Comentario</Label>
             <Textarea
               value={comentario}
               onChange={(e) => setComentario(e.target.value)}
               placeholder="Ingrese un comentario (obligatorio)..."
-              className="min-h-[80px] text-sm"
+              className="min-h-[60px] text-xs border-slate-200 focus:border-sky-300"
             />
           </div>
 
           {/* Estado */}
-          <div className="flex items-center gap-3">
-            <Label className="w-28 text-sm font-semibold shrink-0">Estado</Label>
-            <Select value={estadoAcuerdo} onValueChange={setEstadoAcuerdo}>
-              <SelectTrigger className="!h-7 !py-1 text-xs w-56">
-                <SelectValue placeholder="Seleccionar estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Aprobado">Aprobado</SelectItem>
-                <SelectItem value="No Aprobado">No Aprobado</SelectItem>
-                <SelectItem value="Aprobado por Excepción">Aprobado por Excepción</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="bg-slate-50 rounded-lg p-2 border-2 border-slate-300">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-medium shrink-0 text-slate-600">Estado</Label>
+              <Select value={estadoAcuerdo} onValueChange={setEstadoAcuerdo}>
+                <SelectTrigger className="w-56 !h-7 !py-0.5 text-xs bg-white border-slate-200 focus:border-sky-300">
+                  <SelectValue placeholder="Seleccionar estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Aprobado">
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      Aprobado
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="No Aprobado">No Aprobado</SelectItem>
+                  <SelectItem value="Aprobado por Excepción">Aprobado por Excepción</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Botones de acción */}
-          <div className="flex justify-end gap-3 pt-4 border-t-2 border-gray-300">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="px-8 !h-7">
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="px-6 h-7 border-slate-200 text-slate-500 hover:bg-slate-50">
               CANCELAR
             </Button>
-            <Button onClick={handleGuardar} className="px-8 bg-blue-600 hover:bg-blue-700 !h-7">
+            <Button onClick={handleGuardar} className="px-6 h-7 bg-sky-100 hover:bg-sky-200 text-sky-600">
               GUARDAR
             </Button>
           </div>

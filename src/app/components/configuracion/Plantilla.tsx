@@ -586,20 +586,20 @@ export function Plantilla() {
 
       {/* Diálogo Nueva Plantilla */}
       <Dialog open={isNewPlantillaOpen} onOpenChange={setIsNewPlantillaOpen}>
-        <DialogContent className="text-xs !max-w-[1024px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="text-xs !max-w-[1024px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-white">
+          <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
             <DialogTitle>Nueva Plantilla de Cargue</DialogTitle>
             <DialogDescription>
               Configure la estructura de la plantilla Excel para carga de datos
             </DialogDescription>
           </DialogHeader>
           <div>
-            <div className="space-y-4">{/* Selectores superiores */}
-              <div className="flex gap-4 pb-4 border-b">
-                <div className="space-y-2 w-64">
-                  <Label>Producto *</Label>
+            <div className="space-y-2">{/* Selectores superiores */}
+              <div className="flex gap-4 pb-2 border-b border-slate-200">
+                <div className="space-y-1 w-64">
+                  <Label className="text-xs font-medium text-slate-600">Producto *</Label>
                   <Select value={newPlantillaProducto} onValueChange={setNewPlantillaProducto}>
-                    <SelectTrigger className="!h-7 !py-1 text-xs w-[35ch]">
+                    <SelectTrigger className="!h-7 !py-1 text-xs w-[35ch] border-slate-200 focus:border-sky-300">
                       <SelectValue placeholder="Seleccione producto" />
                     </SelectTrigger>
                     <SelectContent>
@@ -612,13 +612,13 @@ export function Plantilla() {
                   </Select>
                 </div>
 
-                <div className="space-y-2 w-64">
-                  <Label>Tipo Cargue *</Label>
+                <div className="space-y-1 w-64">
+                  <Label className="text-xs font-medium text-slate-600">Tipo Cargue *</Label>
                   <Select
                     value={newPlantillaTipoCargue}
                     onValueChange={(value) => setNewPlantillaTipoCargue(value as any)}
                   >
-                    <SelectTrigger className="!h-7 !py-1 text-xs w-[20ch]">
+                    <SelectTrigger className="!h-7 !py-1 text-xs w-[20ch] border-slate-200 focus:border-sky-300">
                       <SelectValue placeholder="Seleccione tipo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -631,16 +631,16 @@ export function Plantilla() {
               </div>
 
               {newPlantillaCampos.length === 0 ? (
-                <div className="text-center py-8">
+                <div className="text-center py-4">
                   <Button onClick={handleGenerarCampos} className="!h-7">
                     Generar Campos de Plantilla
                   </Button>
                 </div>
               ) : (
                 <>
-                  <div className="text-sm text-gray-600 mb-2">
-                    <strong>Nota:</strong> Los campos en gris son de solo lectura. Puede editar
-                    Filtro, Campo Origen y Alias.
+                  <div className="bg-sky-50 border-2 border-sky-200 rounded-lg p-2 mb-2">
+                    <strong className="text-xs text-slate-700">Nota:</strong>
+                    <span className="text-xs text-slate-600"> Los campos en gris son de solo lectura. Puede editar Filtro, Campo Origen y Alias.</span>
                   </div>
                   <div className="border rounded-lg overflow-hidden">
                     <div className="max-h-[400px] overflow-auto">
@@ -674,7 +674,7 @@ export function Plantilla() {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pt-3 border-t border-slate-200">
             <Button
               onClick={handleSaveNewPlantilla}
               disabled={newPlantillaCampos.length === 0}
@@ -683,9 +683,8 @@ export function Plantilla() {
               Guardar Plantilla
             </Button>
             <Button
-              variant="outline"
               onClick={() => setIsNewPlantillaOpen(false)}
-              className="!h-7"
+              className="!h-7 bg-black hover:bg-gray-800 text-white"
             >
               Cancelar
             </Button>
@@ -695,8 +694,8 @@ export function Plantilla() {
 
       {/* Diálogo Editar */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="text-xs max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-white">
+          <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
             <DialogTitle>Editar Campo</DialogTitle>
             <DialogDescription>
               Modifique los valores editables del campo
@@ -704,58 +703,59 @@ export function Plantilla() {
           </DialogHeader>
 
           {editingCampo && (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {/* Información de solo lectura */}
-              <div className="h-7 text-xs p-3 bg-gray-50 rounded-lg space-y-2 text-sm">
-                <div><strong>Producto:</strong> {editingCampo.productoNombre}</div>
-                <div><strong>Tipo Cargue:</strong> {editingCampo.tipoCargue}</div>
-                <div><strong>Tabla:</strong> {editingCampo.tabla}</div>
-                <div><strong>Columna:</strong> {editingCampo.nombreColumna}</div>
-                <div><strong>Tipo Dato:</strong> {editingCampo.tipoDato}</div>
+              <div className="p-2 bg-sky-50 border-2 border-sky-200 rounded-lg space-y-1">
+                <div><strong className="text-slate-700">Producto:</strong> <span className="text-slate-600">{editingCampo.productoNombre}</span></div>
+                <div><strong className="text-slate-700">Tipo Cargue:</strong> <span className="text-slate-600">{editingCampo.tipoCargue}</span></div>
+                <div><strong className="text-slate-700">Tabla:</strong> <span className="text-slate-600">{editingCampo.tabla}</span></div>
+                <div><strong className="text-slate-700">Columna:</strong> <span className="text-slate-600">{editingCampo.nombreColumna}</span></div>
+                <div><strong className="text-slate-700">Tipo Dato:</strong> <span className="text-slate-600">{editingCampo.tipoDato}</span></div>
               </div>
 
               {/* Campos editables */}
-              <div className="space-y-2">
-                <Label>Filtro</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium text-slate-600">Filtro</Label>
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     checked={editFiltro}
                     onCheckedChange={(checked) => setEditFiltro(!!checked)}
                   />
-                  <span className="text-sm text-gray-600">
+                  <span className="text-xs text-slate-600">
                     Usar este campo como filtro
                   </span>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-campo-origen">Campo Origen</Label>
+              <div className="space-y-1">
+                <Label htmlFor="edit-campo-origen" className="text-xs font-medium text-slate-600">Campo Origen</Label>
                 <Input
                   id="edit-campo-origen"
                   value={editCampoOrigen}
                   onChange={(e) => setEditCampoOrigen(e.target.value)}
                   placeholder="Nombre del campo en el archivo de origen"
+                  className="h-7 text-xs border-slate-200 focus:border-sky-300"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-alias">Alias</Label>
+              <div className="space-y-1">
+                <Label htmlFor="edit-alias" className="text-xs font-medium text-slate-600">Alias</Label>
                 <Input
                   id="edit-alias"
                   value={editAlias}
                   onChange={(e) => setEditAlias(e.target.value)}
                   placeholder="Nombre a mostrar en el formulario"
+                  className="h-7 text-xs border-slate-200 focus:border-sky-300"
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-3">
                 <Button onClick={handleSaveEdit} className="flex-1 !h-7">
                   Guardar Cambios
                 </Button>
                 <Button
-                  variant="outline"
                   onClick={() => setIsEditOpen(false)}
-                  className="flex-1 !h-7"
+                  className="flex-1 !h-7 bg-black hover:bg-gray-800 text-white"
                 >
                   Cancelar
                 </Button>

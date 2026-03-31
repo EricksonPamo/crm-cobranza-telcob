@@ -636,8 +636,8 @@ export function Tipificacion() {
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
+                <DialogContent className="text-xs max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-white">
+                  <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
                     <DialogTitle>
                       {editingTipificacion ? 'Editar Tipificación' : 'Nueva Tipificación'}
                     </DialogTitle>
@@ -646,17 +646,17 @@ export function Tipificacion() {
                     </DialogDescription>
                   </DialogHeader>
                   <div>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="producto">Producto *</Label>
+                    <form onSubmit={handleSubmit} className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
+                      <div className="space-y-1">
+                        <Label htmlFor="producto" className="text-xs font-medium text-slate-600">Producto *</Label>
                         <Select
                           value={formData.productoId}
                           onValueChange={(value) =>
                             setFormData({ ...formData, productoId: value })
                           }
                         >
-                          <SelectTrigger id="producto" className="!h-7 !py-1 text-xs">
+                          <SelectTrigger id="producto" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                             <SelectValue placeholder="Seleccione producto" />
                           </SelectTrigger>
                           <SelectContent>
@@ -669,15 +669,15 @@ export function Tipificacion() {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="canal">Canal Comunicación *</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="canal" className="text-xs font-medium text-slate-600">Canal Comunicación *</Label>
                         <Select
                           value={formData.canalComunicacion}
                           onValueChange={(value) =>
                             setFormData({ ...formData, canalComunicacion: value })
                           }
                         >
-                          <SelectTrigger id="canal" className="!h-7 !py-1 text-xs">
+                          <SelectTrigger id="canal" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                             <SelectValue placeholder="Seleccione canal" />
                           </SelectTrigger>
                           <SelectContent>
@@ -690,15 +690,15 @@ export function Tipificacion() {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="tipo">Tipo Tipificación *</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="tipo" className="text-xs font-medium text-slate-600">Tipo Tipificación *</Label>
                         <Select
                           value={formData.tipoTipificacion}
                           onValueChange={(value) =>
                             setFormData({ ...formData, tipoTipificacion: value })
                           }
                         >
-                          <SelectTrigger id="tipo" className="!h-7 !py-1 text-xs">
+                          <SelectTrigger id="tipo" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                             <SelectValue placeholder="Seleccione tipo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -711,8 +711,8 @@ export function Tipificacion() {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="codigoAccion">Código Acción *</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="codigoAccion" className="text-xs font-medium text-slate-600">Código Acción *</Label>
                         <Input
                           id="codigoAccion"
                           value={formData.codigoAccion}
@@ -720,13 +720,13 @@ export function Tipificacion() {
                             setFormData({ ...formData, codigoAccion: e.target.value })
                           }
                           placeholder="Ej: CA01"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                           required
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="codigoResultado">Código Resultado *</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="codigoResultado" className="text-xs font-medium text-slate-600">Código Resultado *</Label>
                         <Input
                           id="codigoResultado"
                           value={formData.codigoResultado}
@@ -734,13 +734,13 @@ export function Tipificacion() {
                             setFormData({ ...formData, codigoResultado: e.target.value })
                           }
                           placeholder="Ej: CR01"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                           required
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="peso">Peso *</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="peso" className="text-xs font-medium text-slate-600">Peso *</Label>
                         <Input
                           id="peso"
                           type="number"
@@ -749,13 +749,13 @@ export function Tipificacion() {
                             setFormData({ ...formData, peso: parseInt(e.target.value) })
                           }
                           placeholder="0"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                           required
                         />
                       </div>
 
-                      <div className="space-y-2 col-span-2">
-                        <Label htmlFor="accion">Acción *</Label>
+                      <div className="space-y-1 col-span-2">
+                        <Label htmlFor="accion" className="text-xs font-medium text-slate-600">Acción *</Label>
                         <Input
                           id="accion"
                           value={formData.accion}
@@ -763,13 +763,13 @@ export function Tipificacion() {
                             setFormData({ ...formData, accion: e.target.value })
                           }
                           placeholder="Descripción de la acción"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                           required
                         />
                       </div>
 
-                      <div className="space-y-2 col-span-2">
-                        <Label htmlFor="resultado">Resultado *</Label>
+                      <div className="space-y-1 col-span-2">
+                        <Label htmlFor="resultado" className="text-xs font-medium text-slate-600">Resultado *</Label>
                         <Input
                           id="resultado"
                           value={formData.resultado}
@@ -777,13 +777,13 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado: e.target.value })
                           }
                           placeholder="Descripción del resultado"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                           required
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="resultado1">Resultado 1</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="resultado1" className="text-xs font-medium text-slate-600">Resultado 1</Label>
                         <Input
                           id="resultado1"
                           value={formData.resultado1}
@@ -791,12 +791,12 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado1: e.target.value })
                           }
                           placeholder="Resultado adicional 1"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="resultado2">Resultado 2</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="resultado2" className="text-xs font-medium text-slate-600">Resultado 2</Label>
                         <Input
                           id="resultado2"
                           value={formData.resultado2}
@@ -804,12 +804,12 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado2: e.target.value })
                           }
                           placeholder="Resultado adicional 2"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="resultado3">Resultado 3</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="resultado3" className="text-xs font-medium text-slate-600">Resultado 3</Label>
                         <Input
                           id="resultado3"
                           value={formData.resultado3}
@@ -817,12 +817,12 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado3: e.target.value })
                           }
                           placeholder="Resultado adicional 3"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="resultado4">Resultado 4</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="resultado4" className="text-xs font-medium text-slate-600">Resultado 4</Label>
                         <Input
                           id="resultado4"
                           value={formData.resultado4}
@@ -830,12 +830,12 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado4: e.target.value })
                           }
                           placeholder="Resultado adicional 4"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="resultado5">Resultado 5</Label>
+                      <div className="space-y-1">
+                        <Label htmlFor="resultado5" className="text-xs font-medium text-slate-600">Resultado 5</Label>
                         <Input
                           id="resultado5"
                           value={formData.resultado5}
@@ -843,13 +843,13 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado5: e.target.value })
                           }
                           placeholder="Resultado adicional 5"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Tiene razón de no pago</Label>
-                        <div className="flex items-center gap-4 h-10">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600">Tiene razón de no pago</Label>
+                        <div className="flex items-center gap-4 h-7">
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="radio"
@@ -877,9 +877,9 @@ export function Tipificacion() {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Mostrar</Label>
-                        <div className="flex items-center gap-4 h-10">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600">Mostrar</Label>
+                        <div className="flex items-center gap-4 h-7">
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="radio"
@@ -908,15 +908,14 @@ export function Tipificacion() {
                       </div>
                     </div>
 
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex gap-3 pt-3">
                       <Button type="submit" className="flex-1 !h-7">
                         {editingTipificacion ? 'Actualizar' : 'Crear Tipificación'}
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
                         onClick={resetForm}
-                        className="flex-1 !h-7"
+                        className="flex-1 !h-7 bg-black hover:bg-gray-800 text-white"
                       >
                         Cancelar
                       </Button>
@@ -1098,8 +1097,8 @@ export function Tipificacion() {
 
         {/* Dialog de Configuración */}
         <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="text-xs max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-white">
+            <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
               <DialogTitle>Configuración de {configTipificacion?.tipoTipificacion}</DialogTitle>
               <DialogDescription>
                 Tipificación: {configTipificacion?.resultado}
@@ -1107,9 +1106,9 @@ export function Tipificacion() {
             </DialogHeader>
 
             {camposNumericos.length === 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-amber-800">
-                  <strong>⚠️ Atención:</strong> No hay campos numéricos configurados en las plantillas de Obligación. 
+              <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-2">
+                <p className="text-xs text-amber-800">
+                  <strong>⚠️ Atención:</strong> No hay campos numéricos configurados en las plantillas de Obligación.
                   Para utilizar las validaciones de monto mínimo y máximo, debe:
                   <br />
                   1. Ir a <strong>Plantillas de Cargue</strong>
@@ -1121,10 +1120,10 @@ export function Tipificacion() {
               </div>
             )}
 
-            <form onSubmit={handleSaveConfig} className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxCuotas">Cantidad máx. de cuotas</Label>
+            <form onSubmit={handleSaveConfig} className="space-y-3">
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label htmlFor="maxCuotas" className="text-xs font-medium text-slate-600">Cantidad máx. de cuotas</Label>
                   <Input
                     id="maxCuotas"
                     type="number"
@@ -1133,13 +1132,13 @@ export function Tipificacion() {
                       setConfigData({ ...configData, maxCuotas: parseInt(e.target.value) })
                     }
                     min="1"
-                    className="h-7 text-sm"
+                    className="h-7 text-xs border-slate-200 focus:border-sky-300"
                     required
                   />
                 </div>
 
                 {/* Monto Mínimo */}
-                <div className="p-4 border rounded-lg space-y-3">
+                <div className="p-3 border-2 border-slate-300 rounded-lg space-y-2">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id="montoMinimoEnabled"
@@ -1151,15 +1150,15 @@ export function Tipificacion() {
                         })
                       }
                     />
-                    <Label htmlFor="montoMinimoEnabled" className="font-semibold">
+                    <Label htmlFor="montoMinimoEnabled" className="text-xs font-semibold text-slate-700">
                       Monto mínimo cobrar
                     </Label>
                   </div>
 
                   {configData.montoMinimo.enabled && (
                     <div className="grid grid-cols-3 gap-3 pl-6">
-                      <div className="space-y-2">
-                        <Label>Comparador</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600">Comparador</Label>
                         <Select
                           value={configData.montoMinimo.comparador}
                           onValueChange={(value) =>
@@ -1169,7 +1168,7 @@ export function Tipificacion() {
                             })
                           }
                         >
-                          <SelectTrigger className="!h-7 !py-1 text-xs">
+                          <SelectTrigger className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1182,8 +1181,8 @@ export function Tipificacion() {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Campo numérico</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600">Campo numérico</Label>
                         <Select
                           value={configData.montoMinimo.campo}
                           onValueChange={(value) =>
@@ -1193,7 +1192,7 @@ export function Tipificacion() {
                             })
                           }
                         >
-                          <SelectTrigger className="!h-7 !py-1 text-xs">
+                          <SelectTrigger className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                             <SelectValue placeholder={camposNumericos.length === 0 ? "No hay campos disponibles" : "Seleccione un campo"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -1212,8 +1211,8 @@ export function Tipificacion() {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Porcentaje (%)</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600">Porcentaje (%)</Label>
                         <Input
                           type="number"
                           value={configData.montoMinimo.porcentaje}
@@ -1229,7 +1228,7 @@ export function Tipificacion() {
                           placeholder="0"
                           min="0"
                           max="100"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                         />
                       </div>
                     </div>
@@ -1237,7 +1236,7 @@ export function Tipificacion() {
                 </div>
 
                 {/* Monto Máximo */}
-                <div className="p-4 border rounded-lg space-y-3">
+                <div className="p-3 border-2 border-slate-300 rounded-lg space-y-2">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id="montoMaximoEnabled"
@@ -1249,15 +1248,15 @@ export function Tipificacion() {
                         })
                       }
                     />
-                    <Label htmlFor="montoMaximoEnabled" className="font-semibold">
+                    <Label htmlFor="montoMaximoEnabled" className="text-xs font-semibold text-slate-700">
                       Monto Máximo cobrar
                     </Label>
                   </div>
 
                   {configData.montoMaximo.enabled && (
                     <div className="grid grid-cols-3 gap-3 pl-6">
-                      <div className="space-y-2">
-                        <Label>Comparador</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600">Comparador</Label>
                         <Select
                           value={configData.montoMaximo.comparador}
                           onValueChange={(value) =>
@@ -1267,7 +1266,7 @@ export function Tipificacion() {
                             })
                           }
                         >
-                          <SelectTrigger className="!h-7 !py-1 text-xs">
+                          <SelectTrigger className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1280,8 +1279,8 @@ export function Tipificacion() {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Campo numérico</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600">Campo numérico</Label>
                         <Select
                           value={configData.montoMaximo.campo}
                           onValueChange={(value) =>
@@ -1291,7 +1290,7 @@ export function Tipificacion() {
                             })
                           }
                         >
-                          <SelectTrigger className="!h-7 !py-1 text-xs">
+                          <SelectTrigger className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                             <SelectValue placeholder={camposNumericos.length === 0 ? "No hay campos disponibles" : "Seleccione un campo"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -1310,8 +1309,8 @@ export function Tipificacion() {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Porcentaje (%)</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600">Porcentaje (%)</Label>
                         <Input
                           type="number"
                           value={configData.montoMaximo.porcentaje}
@@ -1327,7 +1326,7 @@ export function Tipificacion() {
                           placeholder="0"
                           min="0"
                           max="100"
-                          className="h-7 text-sm"
+                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
                         />
                       </div>
                     </div>
@@ -1335,15 +1334,14 @@ export function Tipificacion() {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-3">
                 <Button type="submit" className="flex-1 !h-7">
                   Guardar Configuración
                 </Button>
                 <Button
                   type="button"
-                  variant="outline"
                   onClick={() => setIsConfigDialogOpen(false)}
-                  className="flex-1 !h-7"
+                  className="flex-1 !h-7 bg-black hover:bg-gray-800 text-white"
                 >
                   Cancelar
                 </Button>
@@ -1354,29 +1352,29 @@ export function Tipificacion() {
 
         {/* Dialog de Ciclo del Acuerdo */}
         <Dialog open={isCicloDialogOpen} onOpenChange={setIsCicloDialogOpen}>
-          <DialogContent className="text-xs !max-w-[705px] max-h-[90vh] flex flex-col overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="text-xs !max-w-[705px] max-h-[90vh] flex flex-col overflow-y-auto bg-gradient-to-br from-slate-50 to-white">
+            <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
               <DialogTitle>Ciclo del Acuerdo</DialogTitle>
               <DialogDescription>
                 Tipificación: {cicloTipificacion?.resultado}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 flex-1 flex flex-col overflow-hidden">
+            <div className="space-y-3 flex-1 flex flex-col overflow-hidden">
               {/* Formulario para agregar ciclo */}
-              <div className="h-7 text-xs border rounded-lg p-4 bg-gray-50 flex-shrink-0">
-                <h3 className="font-semibold mb-4">Estados del ciclo</h3>
-                <form onSubmit={handleAddCiclo} className="space-y-4">
+              <div className="text-xs border-2 border-slate-300 rounded-lg p-3 bg-slate-50 flex-shrink-0">
+                <h3 className="font-semibold mb-2 text-slate-700">Estados del ciclo</h3>
+                <form onSubmit={handleAddCiclo} className="space-y-2">
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="estadoActual">Estado Actual *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="estadoActual" className="text-xs font-medium text-slate-600">Estado Actual *</Label>
                       <Select
                         value={cicloData.estadoActual}
                         onValueChange={(value) =>
                           setCicloData({ ...cicloData, estadoActual: value })
                         }
                       >
-                        <SelectTrigger id="estadoActual" className="!h-7 !py-1 text-xs">
+                        <SelectTrigger id="estadoActual" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                           <SelectValue placeholder="Seleccione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1389,15 +1387,15 @@ export function Tipificacion() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="estadoSiguiente">Estado Siguiente *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="estadoSiguiente" className="text-xs font-medium text-slate-600">Estado Siguiente *</Label>
                       <Select
                         value={cicloData.estadoSiguiente}
                         onValueChange={(value) =>
                           setCicloData({ ...cicloData, estadoSiguiente: value })
                         }
                       >
-                        <SelectTrigger id="estadoSiguiente" className="!h-7 !py-1 text-xs">
+                        <SelectTrigger id="estadoSiguiente" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                           <SelectValue placeholder="Seleccione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1410,15 +1408,15 @@ export function Tipificacion() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="tipoUsuario">Tipo Usuario *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="tipoUsuario" className="text-xs font-medium text-slate-600">Tipo Usuario *</Label>
                       <Select
                         value={cicloData.tipoUsuario}
                         onValueChange={(value) =>
                           setCicloData({ ...cicloData, tipoUsuario: value })
                         }
                       >
-                        <SelectTrigger id="tipoUsuario" className="!h-7 !py-1 text-xs">
+                        <SelectTrigger id="tipoUsuario" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
                           <SelectValue placeholder="Seleccione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1440,47 +1438,47 @@ export function Tipificacion() {
 
               {/* Tabla de Ciclos */}
               <div className="flex-1 flex flex-col overflow-hidden">
-                <h3 className="font-semibold mb-4 flex-shrink-0">Ciclo de Estado</h3>
-                <div className="border rounded-lg overflow-hidden flex-1 flex flex-col">
+                <h3 className="font-semibold mb-2 flex-shrink-0 text-slate-700">Ciclo de Estado</h3>
+                <div className="border-2 border-slate-300 rounded-lg overflow-hidden flex-1 flex flex-col">
                   {/* Cabecera fija */}
                   <div>
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-gray-200">
-                          <TableHead className="font-semibold border-r border-gray-300" style={{ width: '130px', minWidth: '130px', maxWidth: '130px' }}>
-                            <div className="space-y-2">
+                        <TableRow className="bg-slate-200">
+                          <TableHead className="font-semibold border-r-2 border-slate-300" style={{ width: '130px', minWidth: '130px', maxWidth: '130px' }}>
+                            <div className="space-y-1">
                               <div>Estado Actual</div>
                               <Input
                                 placeholder="Filtrar..."
                                 value={filtroEstadoActual}
                                 onChange={(e) => setFiltroEstadoActual(e.target.value)}
-                                className="h-8 text-xs"
+                                className="h-7 text-xs border-slate-200 focus:border-sky-300"
                               />
                             </div>
                           </TableHead>
-                          <TableHead className="font-semibold border-r border-gray-300" style={{ width: '130px', minWidth: '130px', maxWidth: '130px' }}>
-                            <div className="space-y-2">
+                          <TableHead className="font-semibold border-r-2 border-slate-300" style={{ width: '130px', minWidth: '130px', maxWidth: '130px' }}>
+                            <div className="space-y-1">
                               <div>Estado Siguiente</div>
                               <Input
                                 placeholder="Filtrar..."
                                 value={filtroEstadoSiguiente}
                                 onChange={(e) => setFiltroEstadoSiguiente(e.target.value)}
-                                className="h-8 text-xs"
+                                className="h-7 text-xs border-slate-200 focus:border-sky-300"
                               />
                             </div>
                           </TableHead>
-                          <TableHead className="font-semibold border-r border-gray-300" style={{ width: '100px', minWidth: '100px', maxWidth: '100px' }}>
-                            <div className="space-y-2">
+                          <TableHead className="font-semibold border-r-2 border-slate-300" style={{ width: '100px', minWidth: '100px', maxWidth: '100px' }}>
+                            <div className="space-y-1">
                               <div>Tipo Usuario</div>
                               <Input
                                 placeholder="Filtrar..."
                                 value={filtroTipoUsuario}
                                 onChange={(e) => setFiltroTipoUsuario(e.target.value)}
-                                className="h-8 text-xs"
+                                className="h-7 text-xs border-slate-200 focus:border-sky-300"
                               />
                             </div>
                           </TableHead>
-                          <TableHead className="font-semibold border-r border-gray-300" style={{ width: '70px', minWidth: '70px', maxWidth: '70px' }}>Estado</TableHead>
+                          <TableHead className="font-semibold border-r-2 border-slate-300" style={{ width: '70px', minWidth: '70px', maxWidth: '70px' }}>Estado</TableHead>
                           <TableHead className="font-semibold text-right" style={{ width: '80px', minWidth: '80px', maxWidth: '80px' }}>Acción</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1495,22 +1493,22 @@ export function Tipificacion() {
                         const { registros, totalRegistros } = getCiclosFiltradosYPaginados(cicloTipificacion?.id || '');
                         return totalRegistros === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                            <TableCell colSpan={5} className="text-center py-8 text-slate-500">
                               No hay ciclos configurados
                             </TableCell>
                           </TableRow>
                         ) : (
                           registros.map((ciclo) => (
-                            <TableRow key={ciclo.id} className="border-b border-gray-300">
-                              <TableCell className="font-medium border-r border-gray-300" style={{ width: '130px', minWidth: '130px', maxWidth: '130px' }}>{ciclo.estadoActual}</TableCell>
-                              <TableCell className="border-r border-gray-300" style={{ width: '130px', minWidth: '130px', maxWidth: '130px' }}>{ciclo.estadoSiguiente}</TableCell>
-                              <TableCell className="border-r border-gray-300" style={{ width: '100px', minWidth: '100px', maxWidth: '100px' }}>{ciclo.tipoUsuario}</TableCell>
-                              <TableCell className="border-r border-gray-300" style={{ width: '70px', minWidth: '70px', maxWidth: '70px' }}>
+                            <TableRow key={ciclo.id} className="border-b-2 border-slate-300">
+                              <TableCell className="font-medium border-r-2 border-slate-300" style={{ width: '130px', minWidth: '130px', maxWidth: '130px' }}>{ciclo.estadoActual}</TableCell>
+                              <TableCell className="border-r-2 border-slate-300" style={{ width: '130px', minWidth: '130px', maxWidth: '130px' }}>{ciclo.estadoSiguiente}</TableCell>
+                              <TableCell className="border-r-2 border-slate-300" style={{ width: '100px', minWidth: '100px', maxWidth: '100px' }}>{ciclo.tipoUsuario}</TableCell>
+                              <TableCell className="border-r-2 border-slate-300" style={{ width: '70px', minWidth: '70px', maxWidth: '70px' }}>
                                 <span
                                   className={`px-2 py-1 rounded-full text-xs font-medium ${
                                     ciclo.estado === 'activo'
-                                      ? 'bg-green-100 text-green-800'
-                                      : 'bg-gray-100 text-gray-800'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-slate-100 text-slate-800'
                                   }`}
                                 >
                                   {ciclo.estado === 'activo' ? 'Activo' : 'Inactivo'}
@@ -1527,9 +1525,9 @@ export function Tipificacion() {
                                     }
                                   >
                                     {ciclo.estado === 'activo' ? (
-                                      <Power className="w-4 h-4 text-green-600" />
+                                      <Power className="w-4 h-4 text-emerald-600" />
                                     ) : (
-                                      <PowerOff className="w-4 h-4 text-gray-400" />
+                                      <PowerOff className="w-4 h-4 text-slate-400" />
                                     )}
                                   </Button>
                                   <Button
@@ -1555,14 +1553,14 @@ export function Tipificacion() {
                 <div className="flex-shrink-0">
                 {(() => {
                   const { totalPaginas, paginaActual, totalRegistros } = getCiclosFiltradosYPaginados(cicloTipificacion?.id || '');
-                  
+
                   if (totalRegistros === 0) return null;
 
                   // Generar números de página a mostrar
                   const getPaginasVisibles = () => {
                     const paginas = [];
                     const maxVisible = 5;
-                    
+
                     if (totalPaginas <= maxVisible) {
                       // Mostrar todas las páginas
                       for (let i = 1; i <= totalPaginas; i++) {
@@ -1578,13 +1576,13 @@ export function Tipificacion() {
                         paginas.push(1, '...', paginaActual - 1, paginaActual, paginaActual + 1, '...', totalPaginas);
                       }
                     }
-                    
+
                     return paginas;
                   };
 
                   return (
-                    <div className="flex items-center justify-between mt-4 px-2">
-                      <div className="text-sm text-gray-600">
+                    <div className="flex items-center justify-between mt-3 px-2">
+                      <div className="text-xs text-slate-600">
                         Mostrando {((paginaActual - 1) * registrosPorPagina) + 1} a{' '}
                         {Math.min(paginaActual * registrosPorPagina, totalRegistros)} de{' '}
                         {totalRegistros} registros
@@ -1595,13 +1593,14 @@ export function Tipificacion() {
                           size="sm"
                           onClick={() => setPaginaCiclo(prev => Math.max(1, prev - 1))}
                           disabled={paginaActual === 1}
+                          className="!h-7 text-xs"
                         >
                           Anterior
                         </Button>
                         <div className="flex items-center gap-1">
-                          {getPaginasVisibles().map((pagina, index) => 
+                          {getPaginasVisibles().map((pagina, index) =>
                             pagina === '...' ? (
-                              <span key={`ellipsis-${index}`} className="px-2 text-gray-400">
+                              <span key={`ellipsis-${index}`} className="px-2 text-slate-400">
                                 ...
                               </span>
                             ) : (
@@ -1610,7 +1609,7 @@ export function Tipificacion() {
                                 variant={pagina === paginaActual ? 'default' : 'outline'}
                                 size="sm"
                                 onClick={() => setPaginaCiclo(pagina as number)}
-                                className="min-w-[32px]"
+                                className="min-w-[32px] !h-7 text-xs"
                               >
                                 {pagina}
                               </Button>
@@ -1622,6 +1621,7 @@ export function Tipificacion() {
                           size="sm"
                           onClick={() => setPaginaCiclo(prev => Math.min(totalPaginas, prev + 1))}
                           disabled={paginaActual === totalPaginas}
+                          className="!h-7 text-xs"
                         >
                           Siguiente
                         </Button>

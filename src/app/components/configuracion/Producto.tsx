@@ -327,32 +327,32 @@ export function Producto() {
                 Nuevo Producto
               </Button>
             </DialogTrigger>
-            <DialogContent className="text-xs !max-w-[770px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
+            <DialogContent className="text-xs !max-w-[770px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-white">
+              <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
+                <DialogTitle className="text-sm font-bold text-slate-700">
                   {editingProducto ? 'Editar Producto' : 'Nuevo Producto'}
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="text-xs text-slate-500">
                   Complete los datos del producto
                 </DialogDescription>
               </DialogHeader>
               <div>
-                <form onSubmit={handleSubmit} className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="empresaId">Empresa *</Label>
+                <form onSubmit={handleSubmit} className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
+                    <div className="space-y-1">
+                      <Label htmlFor="empresaId" className="text-xs font-medium text-slate-600">Empresa *</Label>
                       <Select
                         value={formData.empresaId}
                         onValueChange={(value) =>
                           setFormData({ ...formData, empresaId: value })
                         }
                       >
-                        <SelectTrigger className="!h-7 !py-1 text-xs bg-gray-50 w-[50ch]">
+                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-slate-200 focus:border-sky-300 w-[50ch]">
                           <SelectValue placeholder="Seleccione una empresa" />
                         </SelectTrigger>
                         <SelectContent>
                           {empresasActivas.length === 0 ? (
-                            <div className="p-2 text-sm text-gray-500">
+                            <div className="p-2 text-xs text-slate-400">
                               No hay empresas activas disponibles
                             </div>
                           ) : (
@@ -366,8 +366,8 @@ export function Producto() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="nombre">Nombre *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="nombre" className="text-xs font-medium text-slate-600">Nombre *</Label>
                       <Input
                         id="nombre"
                         value={formData.nombre}
@@ -375,20 +375,20 @@ export function Producto() {
                           setFormData({ ...formData, nombre: e.target.value })
                         }
                         placeholder="Ej: BCP Castigo"
-                        className="h-7 text-xs bg-gray-50 w-[30ch]"
+                        className="h-7 text-xs border-slate-200 focus:border-sky-300 w-[30ch]"
                         required
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="estado">Estado *</Label>
+                    <div className="space-y-1">
+                      <Label htmlFor="estado" className="text-xs font-medium text-slate-600">Estado *</Label>
                       <Select
                         value={formData.estado}
                         onValueChange={(value) =>
                           setFormData({ ...formData, estado: value as 'activo' | 'inactivo' })
                         }
                       >
-                        <SelectTrigger className="!h-7 !py-1 text-xs bg-gray-50 w-32">
+                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-slate-200 focus:border-sky-300 w-32">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -399,23 +399,23 @@ export function Producto() {
                     </div>
 
                     {!editingProducto && (
-                      <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p className="text-xs text-blue-800">
+                      <div className="col-span-2 bg-sky-50 border-2 border-sky-200 rounded-lg p-2">
+                        <p className="text-xs text-sky-700">
                           <strong>Nota:</strong> El código del producto se generará automáticamente.
                         </p>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button type="submit" className="!h-7 bg-black hover:bg-gray-800 text-white px-8">
+                  <div className="flex gap-2 pt-2 border-t border-slate-200">
+                    <Button type="submit" className="!h-7 bg-black hover:bg-gray-800 text-white px-8 text-xs">
                       {editingProducto ? 'Actualizar' : 'Crear Producto'}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={resetForm}
-                      className="!h-7 px-8"
+                      className="!h-7 px-8 text-xs border-slate-200"
                     >
                       Cancelar
                     </Button>
@@ -426,51 +426,51 @@ export function Producto() {
                   const totalPages = Math.ceil(basesAsociadas.length / itemsPerPage);
                   const startIndex = (basesPage - 1) * itemsPerPage;
                   const paginatedBases = basesAsociadas.slice(startIndex, startIndex + itemsPerPage);
-                  
+
                   return (
-                  <div className="mt-8 pt-6 border-t">
-                    <h3 className="font-semibold mb-4 text-lg">Bases Asociadas</h3>
-                    <div className="border border-gray-300 rounded-lg overflow-hidden">
+                  <div className="mt-4 pt-3 border-t border-slate-200">
+                    <h3 className="font-semibold mb-2 text-sm text-slate-700">Bases Asociadas</h3>
+                    <div className="border-2 border-slate-300 rounded-lg overflow-hidden">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-gray-200">
-                            <TableHead className="font-semibold text-left border-r border-gray-300 py-2">Código</TableHead>
-                            <TableHead className="font-semibold text-left border-r border-gray-300 py-2">Base</TableHead>
-                            <TableHead className="font-semibold text-left border-r border-gray-300 py-2">Usuario</TableHead>
-                            <TableHead className="font-semibold text-left border-r border-gray-300 py-2">Fecha</TableHead>
-                            <TableHead className="font-semibold text-center border-r border-gray-300 py-2">Estado</TableHead>
-                            <TableHead className="font-semibold text-right py-2">Acción</TableHead>
+                          <TableRow className="bg-slate-200">
+                            <TableHead className="font-medium text-left border-r border-slate-300 py-1 text-xs">Código</TableHead>
+                            <TableHead className="font-medium text-left border-r border-slate-300 py-1 text-xs">Base</TableHead>
+                            <TableHead className="font-medium text-left border-r border-slate-300 py-1 text-xs">Usuario</TableHead>
+                            <TableHead className="font-medium text-left border-r border-slate-300 py-1 text-xs">Fecha</TableHead>
+                            <TableHead className="font-medium text-center border-r border-slate-300 py-1 text-xs">Estado</TableHead>
+                            <TableHead className="font-medium text-right py-1 text-xs">Acción</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {paginatedBases.map((base) => (
-                            <TableRow key={base.id} className="border-b border-gray-300">
-                              <TableCell className="font-medium text-left border-r border-gray-300 py-0.5.5 text-sm">{base.codigo}</TableCell>
-                              <TableCell className="text-left border-r border-gray-300 py-0.5.5 text-sm">{base.nombreBase}</TableCell>
-                              <TableCell className="text-gray-600 text-left border-r border-gray-300 py-0.5.5 text-sm">{base.usuarioCreador}</TableCell>
-                              <TableCell className="text-gray-600 text-left border-r border-gray-300 py-0.5.5 text-sm">
+                            <TableRow key={base.id} className="border-b border-slate-200">
+                              <TableCell className="font-medium text-left border-r border-slate-200 py-1 text-xs">{base.codigo}</TableCell>
+                              <TableCell className="text-left border-r border-slate-200 py-1 text-xs">{base.nombreBase}</TableCell>
+                              <TableCell className="text-slate-500 text-left border-r border-slate-200 py-1 text-xs">{base.usuarioCreador}</TableCell>
+                              <TableCell className="text-slate-500 text-left border-r border-slate-200 py-1 text-xs">
                                 {new Date(base.fechaCreacion).toLocaleDateString('es-ES', {
                                   day: '2-digit',
                                   month: '2-digit',
                                   year: 'numeric',
                                 })}
                               </TableCell>
-                              <TableCell className="text-center border-r border-gray-300 py-0.5.5">
+                              <TableCell className="text-center border-r border-slate-200 py-1">
                                 <span
                                   className={`px-2 py-0.5 rounded-md text-xs font-medium ${
                                     base.estado === 'activo'
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-gray-100 text-gray-700'
+                                      ? 'bg-emerald-100 text-emerald-600'
+                                      : 'bg-slate-100 text-slate-600'
                                   }`}
                                 >
                                   {base.estado === 'activo' ? 'Activo' : 'Inactivo'}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-right py-0.5.5">
+                              <TableCell className="text-right py-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-gray-600 hover:text-gray-900 h-7 px-2 text-xs"
+                                  className="text-slate-500 hover:text-slate-700 h-6 px-2 text-xs"
                                   onClick={() => handleToggleBaseEstado(base.id)}
                                 >
                                   {base.estado === 'activo' ? 'Inactivar' : 'Activar'}
@@ -481,27 +481,29 @@ export function Producto() {
                         </TableBody>
                       </Table>
                     </div>
-                    
+
                     {totalPages > 1 && (
-                      <div className="flex items-center justify-between mt-4">
-                        <p className="text-sm text-gray-600">
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-slate-500">
                           Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, basesAsociadas.length)} de {basesAsociadas.length} registros
                         </p>
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
                             size="sm"
+                            className="h-6 text-xs"
                             onClick={() => setBasesPage(basesPage - 1)}
                             disabled={basesPage === 1}
                           >
                             Anterior
                           </Button>
-                          <span className="px-3 py-0.5 text-sm">
+                          <span className="px-2 py-0.5 text-xs">
                             Página {basesPage} de {totalPages}
                           </span>
                           <Button
                             variant="outline"
                             size="sm"
+                            className="h-6 text-xs"
                             onClick={() => setBasesPage(basesPage + 1)}
                             disabled={basesPage === totalPages}
                           >

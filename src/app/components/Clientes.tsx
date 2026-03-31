@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -10,7 +11,15 @@ import {
   SelectValue,
 } from './ui/select';
 import { Card, CardContent } from './ui/card';
-import { FileText, Search } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { FileText, Search, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Deuda {
@@ -114,11 +123,23 @@ const clientesSimulados: ClienteProducto[] = [
 ];
 
 export function Clientes() {
+  const navigate = useNavigate();
   const [buscarPor, setBuscarPor] = useState<'identificacion' | 'cuenta' | 'nombre'>('identificacion');
   const [valorBusqueda, setValorBusqueda] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState<'activo' | 'inactivo'>('activo');
   const [resultados, setResultados] = useState<ClienteProducto[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Estado para el diálogo de confirmación
+  const [dialogoAbierto, setDialogoAbierto] = useState(false);
+  const [dialogoMismoCliente, setDialogoMismoCliente] = useState(false);
+  const [clientePendiente, setClientePendiente] = useState<ClienteProducto | null>(null);
+
+  // Limpiar sessionStorage de fichas al cargar la página
+  // Solo limpiar si no hay ficha abierta (para permitir volver a la ficha)
+  useEffect(() => {
+    // No limpiar automáticamente - el usuario puede volver a Clientes mientras tiene una ficha abierta
+  }, []);
 
   const handleBuscar = () => {
     if (!valorBusqueda.trim()) {
@@ -170,9 +191,89 @@ export function Clientes() {
     }).format(value);
   };
 
+  // Función para verificar si la ficha realmente está abierta (usando heartbeat)
+  const verificarFichaActiva = (): boolean => {
+    const heartbeat = localStorage.getItem('fichaHeartbeat');
+    if (!heartbeat) return false;
+
+    const tiempoHeartbeat = parseInt(heartbeat);
+    const tiempoActual = Date.now();
+    // Si el heartbeat es mayor a 3 segundos, la ficha ya no está activa
+    return (tiempoActual - tiempoHeartbeat) < 3000;
+  };
+
   const handleGestionar = (cliente: ClienteProducto) => {
-    // Por ahora solo muestra un mensaje, más adelante abrirá la ficha de gestión
-    toast.info(`Abriendo ficha de gestión para ${cliente.cuenta} - Próximamente`);
+    // Verificar si ya existe una ficha de gestión abierta
+    const fichaAbierta = sessionStorage.getItem('fichaGestionAbierta');
+    const clienteAbierto = sessionStorage.getItem('clienteGestionId');
+
+    // Verificar si la ficha realmente está activa (heartbeat)
+    const fichaActiva = verificarFichaActiva();
+
+    if (fichaAbierta && fichaActiva && clienteAbierto === cliente.id) {
+      // La ficha ya está abierta para este mismo cliente - mostrar diálogo
+      setDialogoMismoCliente(true);
+      return;
+    }
+
+    if (fichaAbierta && fichaActiva && clienteAbierto !== cliente.id) {
+      // Hay una ficha abierta para otro cliente - mostrar diálogo
+      setClientePendiente(cliente);
+      setDialogoAbierto(true);
+      return;
+    }
+
+    // Si hay una ficha registrada pero no está activa, limpiar todo
+    if (fichaAbierta && !fichaActiva) {
+      sessionStorage.removeItem('fichaGestionAbierta');
+      sessionStorage.removeItem('clienteGestion');
+      sessionStorage.removeItem('clienteGestionId');
+      localStorage.removeItem('fichaHeartbeat');
+    }
+
+    // No hay ficha abierta (o no está activa), abrir directamente
+    abrirFichaGestion(cliente);
+  };
+
+  const abrirFichaGestion = (cliente: ClienteProducto) => {
+    // Señalar a la ficha anterior que debe cerrarse (si existe)
+    const fichaAbierta = sessionStorage.getItem('fichaGestionAbierta');
+    if (fichaAbierta) {
+      localStorage.setItem('cerrarFichaAnterior', Date.now().toString());
+    }
+
+    // Marcar que hay una ficha abierta
+    sessionStorage.setItem('fichaGestionAbierta', 'true');
+    // Guardar el ID del cliente que se está gestionando
+    sessionStorage.setItem('clienteGestionId', cliente.id);
+
+    // Guardar los datos del cliente en sessionStorage para que la nueva pestaña los pueda leer
+    sessionStorage.setItem('clienteGestion', JSON.stringify(cliente));
+
+    // Abrir la ficha de gestión en una nueva pestaña
+    const newWindow = window.open('/cobranza/ficha', '_blank');
+
+    // Si la ventana no se pudo abrir (bloqueador de popups)
+    if (!newWindow) {
+      sessionStorage.removeItem('fichaGestionAbierta');
+      sessionStorage.removeItem('clienteGestionId');
+      sessionStorage.removeItem('clienteGestion');
+      toast.error('No se pudo abrir la ficha. Permita ventanas emergentes en su navegador.');
+    }
+  };
+
+  const confirmarNuevaFicha = () => {
+    if (clientePendiente) {
+      abrirFichaGestion(clientePendiente);
+    }
+    setDialogoAbierto(false);
+    setClientePendiente(null);
+  };
+
+  const cancelarNuevaFicha = () => {
+    setDialogoAbierto(false);
+    setClientePendiente(null);
+    toast.info('Operación cancelada');
   };
 
   return (
@@ -415,6 +516,54 @@ export function Clientes() {
           )}
         </div>
       )}
+
+      {/* Diálogo de confirmación para cerrar ficha existente */}
+      <Dialog open={dialogoAbierto} onOpenChange={setDialogoAbierto}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="w-5 h-5" />
+              Ficha de gestión abierta
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Ya tiene una ficha de gestión abierta para otro cliente. ¿Desea cerrarla y abrir la nueva ficha?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              Si continúa, la ficha actual se cerrará automáticamente y se abrirá la nueva.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={cancelarNuevaFicha}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmarNuevaFicha} className="bg-amber-600 hover:bg-amber-700">
+              Aceptar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo cuando ya tiene la ficha del mismo cliente abierta */}
+      <Dialog open={dialogoMismoCliente} onOpenChange={setDialogoMismoCliente}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-600">
+              <FileText className="w-5 h-5" />
+              Ficha ya abierta
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Ya tiene abierta la ficha de este cliente. Cierre la ficha actual antes de abrirla nuevamente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setDialogoMismoCliente(false)}>
+              Entendido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
