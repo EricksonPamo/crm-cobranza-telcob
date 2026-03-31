@@ -559,7 +559,7 @@ export function Tipificacion() {
   };
 
   return (
-    <Card>
+    <Card className="border-2 border-sky-400 bg-gray-50">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -588,7 +588,7 @@ export function Tipificacion() {
                 setFilteredTipificaciones([]);
               }}
             >
-              <SelectTrigger id="filtro-producto" className="!h-7 !py-1 text-xs w-44">
+              <SelectTrigger id="filtro-producto" className="!h-7 !py-1 text-xs w-44 border-sky-500">
                 <SelectValue placeholder="Seleccione producto" />
               </SelectTrigger>
               <SelectContent>
@@ -611,7 +611,7 @@ export function Tipificacion() {
                 setFilteredTipificaciones([]);
               }}
             >
-              <SelectTrigger id="filtro-canal" className="!h-7 !py-1 text-xs w-40">
+              <SelectTrigger id="filtro-canal" className="!h-7 !py-1 text-xs w-40 border-sky-500">
                 <SelectValue placeholder="Seleccione canal" />
               </SelectTrigger>
               <SelectContent>
@@ -656,7 +656,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, productoId: value })
                           }
                         >
-                          <SelectTrigger id="producto" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                          <SelectTrigger id="producto" className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                             <SelectValue placeholder="Seleccione producto" />
                           </SelectTrigger>
                           <SelectContent>
@@ -677,7 +677,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, canalComunicacion: value })
                           }
                         >
-                          <SelectTrigger id="canal" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                          <SelectTrigger id="canal" className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                             <SelectValue placeholder="Seleccione canal" />
                           </SelectTrigger>
                           <SelectContent>
@@ -698,7 +698,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, tipoTipificacion: value })
                           }
                         >
-                          <SelectTrigger id="tipo" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                          <SelectTrigger id="tipo" className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                             <SelectValue placeholder="Seleccione tipo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -720,7 +720,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, codigoAccion: e.target.value })
                           }
                           placeholder="Ej: CA01"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                           required
                         />
                       </div>
@@ -734,7 +734,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, codigoResultado: e.target.value })
                           }
                           placeholder="Ej: CR01"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                           required
                         />
                       </div>
@@ -749,7 +749,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, peso: parseInt(e.target.value) })
                           }
                           placeholder="0"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                           required
                         />
                       </div>
@@ -763,7 +763,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, accion: e.target.value })
                           }
                           placeholder="Descripción de la acción"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                           required
                         />
                       </div>
@@ -777,7 +777,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado: e.target.value })
                           }
                           placeholder="Descripción del resultado"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                           required
                         />
                       </div>
@@ -791,7 +791,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado1: e.target.value })
                           }
                           placeholder="Resultado adicional 1"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                         />
                       </div>
 
@@ -804,7 +804,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado2: e.target.value })
                           }
                           placeholder="Resultado adicional 2"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                         />
                       </div>
 
@@ -817,7 +817,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado3: e.target.value })
                           }
                           placeholder="Resultado adicional 3"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                         />
                       </div>
 
@@ -830,7 +830,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado4: e.target.value })
                           }
                           placeholder="Resultado adicional 4"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                         />
                       </div>
 
@@ -843,7 +843,7 @@ export function Tipificacion() {
                             setFormData({ ...formData, resultado5: e.target.value })
                           }
                           placeholder="Resultado adicional 5"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                         />
                       </div>
 
@@ -1132,7 +1132,7 @@ export function Tipificacion() {
                       setConfigData({ ...configData, maxCuotas: parseInt(e.target.value) })
                     }
                     min="1"
-                    className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                    className="h-7 text-xs border-sky-500 focus:border-sky-600"
                     required
                   />
                 </div>
@@ -1168,7 +1168,7 @@ export function Tipificacion() {
                             })
                           }
                         >
-                          <SelectTrigger className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                          <SelectTrigger className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1192,7 +1192,7 @@ export function Tipificacion() {
                             })
                           }
                         >
-                          <SelectTrigger className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                          <SelectTrigger className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                             <SelectValue placeholder={camposNumericos.length === 0 ? "No hay campos disponibles" : "Seleccione un campo"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -1228,7 +1228,7 @@ export function Tipificacion() {
                           placeholder="0"
                           min="0"
                           max="100"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                         />
                       </div>
                     </div>
@@ -1266,7 +1266,7 @@ export function Tipificacion() {
                             })
                           }
                         >
-                          <SelectTrigger className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                          <SelectTrigger className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1290,7 +1290,7 @@ export function Tipificacion() {
                             })
                           }
                         >
-                          <SelectTrigger className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                          <SelectTrigger className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                             <SelectValue placeholder={camposNumericos.length === 0 ? "No hay campos disponibles" : "Seleccione un campo"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -1326,7 +1326,7 @@ export function Tipificacion() {
                           placeholder="0"
                           min="0"
                           max="100"
-                          className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                          className="h-7 text-xs border-sky-500 focus:border-sky-600"
                         />
                       </div>
                     </div>
@@ -1374,7 +1374,7 @@ export function Tipificacion() {
                           setCicloData({ ...cicloData, estadoActual: value })
                         }
                       >
-                        <SelectTrigger id="estadoActual" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                        <SelectTrigger id="estadoActual" className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                           <SelectValue placeholder="Seleccione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1395,7 +1395,7 @@ export function Tipificacion() {
                           setCicloData({ ...cicloData, estadoSiguiente: value })
                         }
                       >
-                        <SelectTrigger id="estadoSiguiente" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                        <SelectTrigger id="estadoSiguiente" className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                           <SelectValue placeholder="Seleccione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1416,7 +1416,7 @@ export function Tipificacion() {
                           setCicloData({ ...cicloData, tipoUsuario: value })
                         }
                       >
-                        <SelectTrigger id="tipoUsuario" className="!h-7 !py-1 text-xs border-slate-200 focus:border-sky-300">
+                        <SelectTrigger id="tipoUsuario" className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                           <SelectValue placeholder="Seleccione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1452,7 +1452,7 @@ export function Tipificacion() {
                                 placeholder="Filtrar..."
                                 value={filtroEstadoActual}
                                 onChange={(e) => setFiltroEstadoActual(e.target.value)}
-                                className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                                className="h-7 text-xs border-sky-500 focus:border-sky-600"
                               />
                             </div>
                           </TableHead>
@@ -1463,7 +1463,7 @@ export function Tipificacion() {
                                 placeholder="Filtrar..."
                                 value={filtroEstadoSiguiente}
                                 onChange={(e) => setFiltroEstadoSiguiente(e.target.value)}
-                                className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                                className="h-7 text-xs border-sky-500 focus:border-sky-600"
                               />
                             </div>
                           </TableHead>
@@ -1474,7 +1474,7 @@ export function Tipificacion() {
                                 placeholder="Filtrar..."
                                 value={filtroTipoUsuario}
                                 onChange={(e) => setFiltroTipoUsuario(e.target.value)}
-                                className="h-7 text-xs border-slate-200 focus:border-sky-300"
+                                className="h-7 text-xs border-sky-500 focus:border-sky-600"
                               />
                             </div>
                           </TableHead>

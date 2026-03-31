@@ -147,7 +147,7 @@ const CampoRow = memo(({ campo, onUpdate }: {
           onChange={handleCampoOrigenChange}
           onBlur={handleCampoOrigenBlur}
           placeholder="Campo origen"
-          className="h-7 text-xs h-8 text-sm"
+          className="h-7 text-xs h-8 text-sm border-sky-500"
         />
       </td>
       <td style={{ width: '180px' }} className="px-2 py-2">
@@ -156,7 +156,7 @@ const CampoRow = memo(({ campo, onUpdate }: {
           onChange={handleAliasChange}
           onBlur={handleAliasBlur}
           placeholder="Alias"
-          className="h-7 text-xs h-8 text-sm"
+          className="h-7 text-xs h-8 text-sm border-sky-500"
         />
       </td>
     </tr>
@@ -434,7 +434,7 @@ export function Plantilla() {
   };
 
   return (
-    <Card>
+    <Card className="border-2 border-sky-400 bg-gray-50">
       <CardHeader>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -453,7 +453,7 @@ export function Plantilla() {
           <div className="flex items-center gap-1">
             <Label className="text-xs text-gray-500 whitespace-nowrap">Producto:</Label>
             <Select value={selectedProducto} onValueChange={setSelectedProducto}>
-              <SelectTrigger className="!h-7 !py-1 text-xs w-44">
+              <SelectTrigger className="!h-7 !py-1 text-xs w-44 border-sky-500">
                 <SelectValue placeholder="Todos los productos" />
               </SelectTrigger>
               <SelectContent>
@@ -468,7 +468,7 @@ export function Plantilla() {
           <div className="flex items-center gap-1">
             <Label className="text-xs text-gray-500 whitespace-nowrap">Tipo Cargue:</Label>
             <Select value={selectedTipoCargue} onValueChange={setSelectedTipoCargue}>
-              <SelectTrigger className="!h-7 !py-1 text-xs w-36">
+              <SelectTrigger className="!h-7 !py-1 text-xs w-36 border-sky-500">
                 <SelectValue placeholder="Todos los tipos" />
               </SelectTrigger>
               <SelectContent>
@@ -599,7 +599,7 @@ export function Plantilla() {
                 <div className="space-y-1 w-64">
                   <Label className="text-xs font-medium text-slate-600">Producto *</Label>
                   <Select value={newPlantillaProducto} onValueChange={setNewPlantillaProducto}>
-                    <SelectTrigger className="!h-7 !py-1 text-xs w-[35ch] border-slate-200 focus:border-sky-300">
+                    <SelectTrigger className="!h-7 !py-1 text-xs w-[35ch] border-sky-500 focus:border-sky-600">
                       <SelectValue placeholder="Seleccione producto" />
                     </SelectTrigger>
                     <SelectContent>
@@ -618,7 +618,7 @@ export function Plantilla() {
                     value={newPlantillaTipoCargue}
                     onValueChange={(value) => setNewPlantillaTipoCargue(value as any)}
                   >
-                    <SelectTrigger className="!h-7 !py-1 text-xs w-[20ch] border-slate-200 focus:border-sky-300">
+                    <SelectTrigger className="!h-7 !py-1 text-xs w-[20ch] border-sky-500 focus:border-sky-600">
                       <SelectValue placeholder="Seleccione tipo" />
                     </SelectTrigger>
                     <SelectContent>

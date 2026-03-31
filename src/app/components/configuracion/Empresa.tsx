@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Building2, Plus, Pencil, Trash2, Search, Upload, X } from 'lucide-react';
+import { Building2, Plus, Pencil, Trash2, Search, Upload, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EmpresaData {
@@ -80,6 +80,10 @@ export function Empresa() {
     logoUrl: '',
     estado: 'activo',
   });
+
+  // Estado de paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const registrosPorPagina = 20;
 
   useEffect(() => {
     loadEmpresas();
@@ -229,6 +233,12 @@ export function Empresa() {
     });
   }, [empresas, searchTerm, filterEstado, criteriosAplicados]);
 
+  // Calcular paginación
+  const totalPaginas = Math.ceil(filteredEmpresas.length / registrosPorPagina) || 1;
+  const indiceInicio = (paginaActual - 1) * registrosPorPagina;
+  const indiceFin = indiceInicio + registrosPorPagina;
+  const empresasPaginadas = filteredEmpresas.slice(indiceInicio, indiceFin);
+
   const generateCodigo = () => {
     const maxCodigo = empresas.reduce((max, e) => {
       const num = parseInt(e.codigo);
@@ -238,7 +248,7 @@ export function Empresa() {
   };
 
   return (
-    <Card>
+    <Card className="border-2 border-sky-400 bg-gray-50">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -262,7 +272,7 @@ export function Empresa() {
               type="date"
               value={fechaDesde}
               onChange={(e) => setFechaDesde(e.target.value)}
-              className="h-7 text-xs w-36"
+              className="h-7 text-xs w-36 border-sky-500"
             />
           </div>
           <div className="flex items-center gap-1">
@@ -271,7 +281,7 @@ export function Empresa() {
               type="date"
               value={fechaHasta}
               onChange={(e) => setFechaHasta(e.target.value)}
-              className="h-7 text-xs w-36"
+              className="h-7 text-xs w-36 border-sky-500"
             />
           </div>
           <Button size="sm" className="h-7 text-xs px-3" onClick={handleBuscar}>
@@ -280,7 +290,7 @@ export function Empresa() {
           </Button>
           <div className="ml-auto flex items-center gap-2">
             <Select value={filterEstado} onValueChange={(value: any) => setFilterEstado(value)}>
-              <SelectTrigger className="w-28 !h-7 !py-1 text-xs">
+              <SelectTrigger className="w-28 !h-7 !py-1 text-xs border-sky-500">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -473,14 +483,14 @@ export function Empresa() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredEmpresas.length === 0 ? (
+            {empresasPaginadas.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                   No se encontraron empresas
                 </TableCell>
               </TableRow>
             ) : (
-              filteredEmpresas.map((empresa) => (
+              empresasPaginadas.map((empresa) => (
                 <TableRow key={empresa.id} className="border-b border-gray-300">
                   <TableCell className="border-r border-gray-300 py-0.5">
                     {empresa.logoUrl ? (
@@ -533,6 +543,35 @@ export function Empresa() {
             )}
           </TableBody>
         </Table>
+
+        {/* Paginación */}
+        <div className="flex justify-between items-center mt-2 pt-2 border-t">
+          <div className="text-sm text-gray-600">
+            Página {paginaActual} de {totalPaginas} | Total: {filteredEmpresas.length} registro(s)
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+              disabled={paginaActual === 1}
+              className="!h-7"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+              disabled={paginaActual === totalPaginas}
+              className="!h-7"
+            >
+              Siguiente
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

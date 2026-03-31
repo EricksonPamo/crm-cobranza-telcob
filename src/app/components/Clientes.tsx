@@ -290,7 +290,7 @@ export function Clientes() {
       </div>
 
       {/* Filtros de búsqueda */}
-      <Card>
+      <Card className="border-2 border-sky-400 bg-gray-50">
         <CardContent className="pt-6">
           <div className="flex gap-4 items-end">
             {/* Contenedor flex para campos izquierdos */}
@@ -299,7 +299,7 @@ export function Clientes() {
               <div className="w-48 space-y-2">
                 <Label>Buscar por</Label>
                 <Select value={buscarPor} onValueChange={(value: any) => setBuscarPor(value)}>
-                  <SelectTrigger className="!h-7 !py-1 text-xs">
+                  <SelectTrigger className="!h-7 !py-1 text-xs border-sky-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -322,7 +322,7 @@ export function Clientes() {
                     buscarPor === 'cuenta' ? 'Ingrese número de cuenta' :
                     'Ingrese nombre del cliente'
                   }
-                  className="h-7 text-xs"
+                  className="h-7 text-xs border-sky-500"
                 />
               </div>
 
@@ -330,7 +330,7 @@ export function Clientes() {
               <div className="w-40 space-y-2">
                 <Label>Estado</Label>
                 <Select value={estadoFiltro} onValueChange={(value: any) => setEstadoFiltro(value)}>
-                  <SelectTrigger className="!h-7 !py-1 text-xs">
+                  <SelectTrigger className="!h-7 !py-1 text-xs border-sky-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -363,7 +363,7 @@ export function Clientes() {
             </Card>
           ) : (
             resultados.map((cliente, index) => (
-              <Card key={cliente.id} className="border-2 border-gray-300 max-w-[60%]">
+              <Card key={cliente.id} className="border-2 border-sky-400 max-w-[60%]">
                 <CardContent className="p-3">
                   {/* Encabezado de tarjeta */}
                   <div className="mb-2 pb-2 border-b-2 border-gray-300">
@@ -425,11 +425,11 @@ export function Clientes() {
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="bg-gray-100 border-b-2 border-gray-300">
-                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">cuenta</th>
-                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">producto</th>
-                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">moneda</th>
-                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">deuda</th>
-                                <th className="px-2 py-1 text-left font-semibold">fecha castigo</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal border-r border-gray-300">Cuenta</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal border-r border-gray-300">Producto</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal border-r border-gray-300">Moneda</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal border-r border-gray-300">Deuda</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal">Fecha Castigo</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -464,12 +464,12 @@ export function Clientes() {
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="bg-gray-100 border-b-2 border-gray-300">
-                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">cuenta</th>
-                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">tipo acuerdo</th>
-                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">tipificación</th>
-                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">monto Negociado</th>
-                                <th className="px-2 py-1 text-left font-semibold border-r border-gray-300">cuotas</th>
-                                <th className="px-2 py-1 text-left font-semibold">fecha Creación</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal border-r border-gray-300">Cuenta</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal border-r border-gray-300">Tipo Acuerdo</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal border-r border-gray-300">Tipificación</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal border-r border-gray-300">Monto Negociado</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal border-r border-gray-300">Cuotas</th>
+                                <th className="px-2 py-1 text-left text-sm font-normal">Fecha Creación</th>
                               </tr>
                             </thead>
                             <tbody>

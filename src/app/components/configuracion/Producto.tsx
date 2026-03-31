@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Plus, Pencil, Trash2, Package, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Producto {
@@ -88,6 +88,10 @@ export function Producto() {
     empresaId: '',
     estado: 'activo',
   });
+
+  // Estado de paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const registrosPorPagina = 20;
 
   useEffect(() => {
     loadProductos();
@@ -264,12 +268,18 @@ export function Producto() {
     });
   }, [productos, searchTerm, filterEstado, criteriosAplicados]);
 
+  // Calcular paginación
+  const totalPaginas = Math.ceil(filteredProductos.length / registrosPorPagina) || 1;
+  const indiceInicio = (paginaActual - 1) * registrosPorPagina;
+  const indiceFin = indiceInicio + registrosPorPagina;
+  const productosPaginados = filteredProductos.slice(indiceInicio, indiceFin);
+
   const empresasActivas = useMemo(() => {
     return empresas.filter((e) => e.estado === 'activo');
   }, [empresas]);
 
   return (
-    <Card>
+    <Card className="border-2 border-sky-400 bg-gray-50">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -293,7 +303,7 @@ export function Producto() {
               type="date"
               value={fechaDesde}
               onChange={(e) => setFechaDesde(e.target.value)}
-              className="h-7 text-xs w-36"
+              className="h-7 text-xs w-36 border-sky-500"
             />
           </div>
           <div className="flex items-center gap-1">
@@ -302,7 +312,7 @@ export function Producto() {
               type="date"
               value={fechaHasta}
               onChange={(e) => setFechaHasta(e.target.value)}
-              className="h-7 text-xs w-36"
+              className="h-7 text-xs w-36 border-sky-500"
             />
           </div>
           <Button size="sm" className="h-7 text-xs px-3" onClick={handleBuscar}>
@@ -311,7 +321,7 @@ export function Producto() {
           </Button>
           <div className="ml-auto flex items-center gap-2">
             <Select value={filterEstado} onValueChange={(value: any) => setFilterEstado(value)}>
-              <SelectTrigger className="w-28 !h-7 !py-1 text-xs">
+              <SelectTrigger className="w-28 !h-7 !py-1 text-xs border-sky-500">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -534,14 +544,14 @@ export function Producto() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProductos.length === 0 ? (
+            {productosPaginados.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                   No hay productos configurados
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProductos.map((producto) => (
+              productosPaginados.map((producto) => (
                 <TableRow key={producto.id} className="border-b border-gray-300">
                   <TableCell className="font-medium border-r border-gray-300 py-0.5 text-xs">{producto.codigo}</TableCell>
                   <TableCell className="border-r border-gray-300 py-0.5 text-xs">{producto.nombre}</TableCell>
@@ -588,6 +598,35 @@ export function Producto() {
             )}
           </TableBody>
         </Table>
+
+        {/* Paginación */}
+        <div className="flex justify-between items-center mt-2 pt-2 border-t">
+          <div className="text-sm text-gray-600">
+            Página {paginaActual} de {totalPaginas} | Total: {filteredProductos.length} registro(s)
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+              disabled={paginaActual === 1}
+              className="!h-7"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+              disabled={paginaActual === totalPaginas}
+              className="!h-7"
+            >
+              Siguiente
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

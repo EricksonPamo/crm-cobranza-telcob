@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Database, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Database, Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Base {
@@ -128,7 +128,9 @@ export function Base() {
   const [editingBase, setEditingBase] = useState<Base | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [carguesPage, setCarguesPage] = useState(1);
+  const [paginaActual, setPaginaActual] = useState(1);
   const itemsPerPage = 10;
+  const registrosPorPagina = 20;
   const [formData, setFormData] = useState<Partial<Base>>({
     productoId: '',
     nombreBase: '',
@@ -335,10 +337,15 @@ export function Base() {
     });
   }, [bases, searchTerm, filterEstado, criteriosAplicados]);
 
+  const totalPaginas = Math.ceil(filteredBases.length / registrosPorPagina);
+  const indiceInicio = (paginaActual - 1) * registrosPorPagina;
+  const indiceFin = indiceInicio + registrosPorPagina;
+  const basesPaginadas = filteredBases.slice(indiceInicio, indiceFin);
+
   const productosActivos = productos.filter((p) => p.estado === 'activo');
 
   return (
-    <Card>
+    <Card className="border-2 border-sky-400 bg-gray-50">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -362,7 +369,7 @@ export function Base() {
               type="date"
               value={fechaDesde}
               onChange={(e) => setFechaDesde(e.target.value)}
-              className="h-7 text-xs w-36"
+              className="h-7 text-xs w-36 border-sky-500"
             />
           </div>
           <div className="flex items-center gap-1">
@@ -371,7 +378,7 @@ export function Base() {
               type="date"
               value={fechaHasta}
               onChange={(e) => setFechaHasta(e.target.value)}
-              className="h-7 text-xs w-36"
+              className="h-7 text-xs w-36 border-sky-500"
             />
           </div>
           <Button size="sm" className="h-7 text-xs px-3" onClick={handleBuscar}>
@@ -380,7 +387,7 @@ export function Base() {
           </Button>
           <div className="ml-auto flex items-center gap-2">
             <Select value={filterEstado} onValueChange={(value: any) => setFilterEstado(value)}>
-              <SelectTrigger className="w-28 !h-7 !py-1 text-xs">
+              <SelectTrigger className="w-28 !h-7 !py-1 text-xs border-sky-500">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -416,7 +423,7 @@ export function Base() {
                           setFormData({ ...formData, productoId: value })
                         }
                       >
-                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-slate-200 focus:border-sky-300 w-[35ch]">
+                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-sky-500 focus:border-sky-600 w-[35ch]">
                           <SelectValue placeholder="Seleccione un producto" />
                         </SelectTrigger>
                         <SelectContent>
@@ -471,7 +478,7 @@ export function Base() {
                           setFormData({ ...formData, cargueGestionar: value })
                         }
                       >
-                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-slate-200 focus:border-sky-300 w-[15ch]">
+                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-sky-500 focus:border-sky-600 w-[15ch]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -512,7 +519,7 @@ export function Base() {
                           setFormData({ ...formData, estado: value as 'activo' | 'inactivo' })
                         }
                       >
-                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-slate-200 focus:border-sky-300 w-[15ch]">
+                        <SelectTrigger className="!h-7 !py-0.5 text-xs border-sky-500 focus:border-sky-600 w-[15ch]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -666,14 +673,14 @@ export function Base() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredBases.length === 0 ? (
+              {basesPaginadas.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                     No hay bases configuradas
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredBases.map((base) => (
+                basesPaginadas.map((base) => (
                   <TableRow key={base.id} className="border-b border-gray-300">
                     <TableCell className="font-medium border-r border-gray-300">{base.codigo}</TableCell>
                     <TableCell className="text-sm border-r border-gray-300">{base.productoNombre}</TableCell>
@@ -736,6 +743,37 @@ export function Base() {
             </TableBody>
           </Table>
         </div>
+
+        {filteredBases.length > 0 && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-xs text-gray-600">
+              Mostrando {indiceInicio + 1} a {Math.min(indiceFin, filteredBases.length)} de {filteredBases.length} registros
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setPaginaActual(paginaActual - 1)}
+                disabled={paginaActual === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-xs">
+                Página {paginaActual} de {totalPaginas || 1}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setPaginaActual(paginaActual + 1)}
+                disabled={paginaActual === totalPaginas || totalPaginas === 0}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

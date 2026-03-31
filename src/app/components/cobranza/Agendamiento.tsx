@@ -274,7 +274,7 @@ export function Agendamiento() {
       </div>
 
       {/* Leyenda de colores */}
-      <Card className="border-2 border-gray-300">
+      <Card className="border-2 border-sky-400">
         <CardContent className="py-1 px-2">
           <div className="flex items-center gap-4 flex-wrap">
             <span className="text-xs font-medium text-gray-600">Motivos:</span>
@@ -296,7 +296,7 @@ export function Agendamiento() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-2">
         {/* Calendario */}
-        <Card className="lg:col-span-3 border-2 border-gray-300">
+        <Card className="lg:col-span-3 border-2 border-sky-400">
           <CardHeader className="p-2 pb-1">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
@@ -328,7 +328,7 @@ export function Agendamiento() {
               {dayNames.map((day) => (
                 <div
                   key={day}
-                  className="text-center text-[12px] font-semibold text-gray-600 py-0.5"
+                  className="text-center text-sm font-bold text-gray-700 py-0.5"
                 >
                   {day}
                 </div>
@@ -354,12 +354,12 @@ export function Agendamiento() {
                   <button
                     key={day}
                     onClick={() => setSelectedDate(new Date(currentYear, currentMonth, day))}
-                    className={`h-12 p-0.5 rounded border transition-colors ${
+                    className={`h-12 p-0.5 rounded border-2 transition-colors ${
                       isSelected
-                        ? 'border-purple-500 bg-purple-50'
+                        ? 'border-purple-600 bg-purple-50'
                         : isToday
-                        ? 'border-purple-300 bg-purple-50/50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border-purple-400 bg-purple-50/50'
+                        : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                     }`}
                   >
                     <div className={`text-[12px] font-medium ${isToday ? 'text-purple-600' : 'text-gray-700'}`}>
@@ -384,7 +384,7 @@ export function Agendamiento() {
         </Card>
 
         {/* Panel de agendamientos del día */}
-        <Card className="border-2 border-gray-300">
+        <Card className="border-2 border-sky-400">
           <CardHeader className="p-2 pb-1">
             <CardTitle className="text-base">
               {selectedDate

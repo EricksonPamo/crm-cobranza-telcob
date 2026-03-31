@@ -438,7 +438,7 @@ export function Cuotas() {
   return (
     <div className="space-y-2">
       {/* Formulario de búsqueda */}
-      <Card>
+      <Card className="border-2 border-sky-400">
         <CardContent className="py-3">
           <div className="flex flex-wrap gap-2 items-end">
             {/* Buscar por (fijo en Fecha Vencimiento) */}
@@ -448,7 +448,7 @@ export function Cuotas() {
                 id="buscar-por"
                 value="Fecha Vencimiento"
                 readOnly
-                className="bg-gray-50 h-7 text-xs"
+                className="bg-gray-50 h-7 text-xs border-sky-500"
               />
             </div>
 
@@ -460,7 +460,7 @@ export function Cuotas() {
                 type="date"
                 value={fechaDesde}
                 onChange={(e) => setFechaDesde(e.target.value)}
-                className="h-7 text-xs"
+                className="h-7 text-xs border-sky-500"
               />
             </div>
             <div className="w-40">
@@ -470,7 +470,7 @@ export function Cuotas() {
                 type="date"
                 value={fechaHasta}
                 onChange={(e) => setFechaHasta(e.target.value)}
-                className="h-7 text-xs"
+                className="h-7 text-xs border-sky-500"
               />
             </div>
 
@@ -483,7 +483,7 @@ export function Cuotas() {
               <div className="relative">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between font-normal h-7 text-xs">
+                    <Button variant="outline" className="w-full justify-between font-normal h-7 text-xs border-sky-500">
                       {productosSeleccionados.length === 0
                         ? 'Seleccione productos...'
                         : `${productosSeleccionados.length} seleccionado(s)`}
@@ -526,7 +526,7 @@ export function Cuotas() {
 
       {/* Tabla de resultados */}
       {mostrarResultados && (
-        <Card>
+        <Card className="border-2 border-sky-400 bg-gray-50">
           <CardContent className="py-2 px-3">
             <div className="flex justify-end items-center mb-1">
               <span className="text-sm text-gray-600">
@@ -537,9 +537,9 @@ export function Cuotas() {
               <table className="w-full border-collapse table-fixed">
                 <thead>
                   <tr className="bg-gray-200">
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-36">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-36">
                       <div className="space-y-1">
-                        <div>producto</div>
+                        <div>Producto</div>
                         <Select
                           value={filtrosColumna.producto[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('producto', valor)}
@@ -556,9 +556,9 @@ export function Cuotas() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>identificación</div>
+                        <div>Identificación</div>
                         <Input
                           value={filtrosColumna.identificacion}
                           onChange={(e) => handleFiltroTexto('identificacion', e.target.value)}
@@ -567,9 +567,9 @@ export function Cuotas() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-[130px]">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-[130px]">
                       <div className="space-y-1">
-                        <div>nombre</div>
+                        <div>Nombre</div>
                         <Input
                           value={filtrosColumna.nombre}
                           onChange={(e) => handleFiltroTexto('nombre', e.target.value)}
@@ -578,9 +578,9 @@ export function Cuotas() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-32">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-32">
                       <div className="space-y-1">
-                        <div>cuenta</div>
+                        <div>Cuenta</div>
                         <Input
                           value={filtrosColumna.cuenta}
                           onChange={(e) => handleFiltroTexto('cuenta', e.target.value)}
@@ -589,9 +589,9 @@ export function Cuotas() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>tipo contacto</div>
+                        <div>Tipo Contacto</div>
                         <Select
                           value={filtrosColumna.tipoContacto[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('tipoContacto', valor)}
@@ -608,9 +608,9 @@ export function Cuotas() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-36">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-36">
                       <div className="space-y-1">
-                        <div>tipificación</div>
+                        <div>Tipificación</div>
                         <Select
                           value={filtrosColumna.tipificacion[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('tipificacion', valor)}
@@ -627,15 +627,15 @@ export function Cuotas() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-20">
-                      cuota
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-20">
+                      Cuota
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-20">
-                      monto
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-20">
+                      Monto
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-32">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-32">
                       <div className="space-y-1">
-                        <div>fecha vencimiento</div>
+                        <div>Fecha Vencimiento</div>
                         <Select
                           value={filtrosColumna.fechaVencimiento[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('fechaVencimiento', valor)}
@@ -652,9 +652,9 @@ export function Cuotas() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-32">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-32">
                       <div className="space-y-1">
-                        <div>agente</div>
+                        <div>Agente</div>
                         <Select
                           value={filtrosColumna.agente[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('agente', valor)}
@@ -671,9 +671,9 @@ export function Cuotas() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>estado</div>
+                        <div>Estado</div>
                         <Select
                           value={filtrosColumna.estado[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('estado', valor)}
@@ -690,8 +690,8 @@ export function Cuotas() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-20">
-                      acción
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-20">
+                      Acción
                     </th>
                   </tr>
                 </thead>
@@ -699,59 +699,59 @@ export function Cuotas() {
                   {cuotasPaginadas.map((cuota, index) => (
                     <tr
                       key={cuota.id}
-                      className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-100'} hover:bg-gray-200 transition-colors`}
                     >
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {cuota.producto}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {cuota.identificacion}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs" title={cuota.nombre}>
+                      <td className="border border-slate-300 px-2 py-1 text-xs" title={cuota.nombre}>
                         <div className="truncate cursor-help">
                           {cuota.nombre}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {cuota.cuenta}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {cuota.tipoContacto}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {cuota.tipificacion}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs text-center">
+                      <td className="border border-slate-300 px-2 py-1 text-xs text-center">
                         <div className="truncate">
                           {cuota.cuota}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs text-right">
+                      <td className="border border-slate-300 px-2 py-1 text-xs text-right">
                         <div className="truncate">
                           {formatearMoneda(cuota.monto)}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {formatearFecha(cuota.fechaVencimiento)}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {cuota.agente}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                             cuota.estado === 'Pagado'
@@ -764,7 +764,7 @@ export function Cuotas() {
                           </span>
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs text-center">
+                      <td className="border border-slate-300 px-2 py-1 text-xs text-center">
                         <Button
                           variant="ghost"
                           size="sm"

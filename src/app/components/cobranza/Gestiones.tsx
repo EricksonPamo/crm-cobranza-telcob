@@ -208,7 +208,8 @@ export function Gestiones() {
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [productosSeleccionados, setProductosSeleccionados] = useState<string[]>([]);
-  const [mostrarResultados, setMostrarResultados] = useState(false);
+  const [mostrarResultados, setMostrarResultados] = useState(true);
+  const [busquedaRealizada, setBusquedaRealizada] = useState(false);
 
   // Estados de filtros de columnas
   const [filtrosColumna, setFiltrosColumna] = useState<FiltrosColumna>({
@@ -255,6 +256,7 @@ export function Gestiones() {
   // Función de búsqueda
   const handleBuscar = () => {
     setMostrarResultados(true);
+    setBusquedaRealizada(true);
     setPaginaActual(1);
   };
 
@@ -286,6 +288,11 @@ export function Gestiones() {
 
   // Filtrar gestiones
   const gestionesFiltradas = useMemo(() => {
+    // Si no se ha realizado búsqueda, retornar array vacío
+    if (!busquedaRealizada) {
+      return [];
+    }
+
     let resultados = gestionesSimuladas;
 
     // Aplicar búsqueda principal
@@ -343,7 +350,7 @@ export function Gestiones() {
     }
 
     return resultados;
-  }, [mostrarResultados, buscarPor, valorBusqueda, fechaDesde, fechaHasta, productosSeleccionados, filtrosColumna]);
+  }, [busquedaRealizada, mostrarResultados, buscarPor, valorBusqueda, fechaDesde, fechaHasta, productosSeleccionados, filtrosColumna]);
 
   // Calcular paginación
   const totalPaginas = Math.ceil(gestionesFiltradas.length / registrosPorPagina);
@@ -375,14 +382,14 @@ export function Gestiones() {
   return (
     <div className="space-y-2">
       {/* Formulario de búsqueda */}
-      <Card>
+      <Card className="border-2 border-sky-400">
         <CardContent className="py-3">
           <div className="flex flex-wrap gap-2 items-end">
             {/* Buscar por */}
             <div className="w-48">
               <Label htmlFor="buscar-por">Buscar por</Label>
               <Select value={buscarPor} onValueChange={(value) => setBuscarPor(value)}>
-                <SelectTrigger id="buscar-por" className="!h-7 !py-1 text-xs">
+                <SelectTrigger id="buscar-por" className="!h-7 !py-1 text-xs border-sky-500">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -407,7 +414,7 @@ export function Gestiones() {
                     handleBuscar();
                   }
                 }}
-                className="h-7 text-xs"
+                className="h-7 text-xs border-sky-500"
               />
             </div>
 
@@ -420,7 +427,7 @@ export function Gestiones() {
               <div className="relative">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between font-normal h-7 text-xs">
+                    <Button variant="outline" className="w-full justify-between font-normal h-7 text-xs border-sky-500">
                       {productosSeleccionados.length === 0
                         ? 'Seleccione productos...'
                         : `${productosSeleccionados.length} seleccionado(s)`}
@@ -463,7 +470,7 @@ export function Gestiones() {
 
       {/* Tabla de resultados */}
       {mostrarResultados && (
-        <Card>
+        <Card className="border-2 border-sky-400 bg-gray-50">
           <CardContent className="py-2 px-3">
             <div className="flex justify-end items-center mb-1">
               <span className="text-sm text-gray-600">
@@ -474,9 +481,9 @@ export function Gestiones() {
               <table className="w-full border-collapse table-fixed">
                 <thead>
                   <tr className="bg-gray-200">
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-36">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-36">
                       <div className="space-y-1">
-                        <div>producto</div>
+                        <div>Producto</div>
                         <Select
                           value={filtrosColumna.producto[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('producto', valor)}
@@ -493,9 +500,9 @@ export function Gestiones() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>identificación</div>
+                        <div>Identificación</div>
                         <Input
                           value={filtrosColumna.identificacion}
                           onChange={(e) => handleFiltroTexto('identificacion', e.target.value)}
@@ -504,9 +511,9 @@ export function Gestiones() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-[130px]">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-[130px]">
                       <div className="space-y-1">
-                        <div>nombre</div>
+                        <div>Nombre</div>
                         <Input
                           value={filtrosColumna.nombre}
                           onChange={(e) => handleFiltroTexto('nombre', e.target.value)}
@@ -515,9 +522,9 @@ export function Gestiones() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>telefono</div>
+                        <div>Teléfono</div>
                         <Input
                           value={filtrosColumna.telefono}
                           onChange={(e) => handleFiltroTexto('telefono', e.target.value)}
@@ -526,9 +533,9 @@ export function Gestiones() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>tipo contacto</div>
+                        <div>Tipo Contacto</div>
                         <Select
                           value={filtrosColumna.tipoContacto[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('tipoContacto', valor)}
@@ -545,9 +552,9 @@ export function Gestiones() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-36">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-36">
                       <div className="space-y-1">
-                        <div>tipificación</div>
+                        <div>Tipificación</div>
                         <Select
                           value={filtrosColumna.tipificacion[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('tipificacion', valor)}
@@ -564,18 +571,18 @@ export function Gestiones() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-20">
-                      monto acuerdo
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-20">
+                      Monto Acuerdo
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-[60px]">
-                      cuotas
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-[60px]">
+                      Cuotas
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-[100px]">
-                      observación
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-[100px]">
+                      Observación
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>fecha gestión</div>
+                        <div>Fecha Gestión</div>
                         <Select
                           value={filtrosColumna.fechaGestion[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('fechaGestion', valor)}
@@ -592,9 +599,9 @@ export function Gestiones() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-32">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-32">
                       <div className="space-y-1">
-                        <div>agente</div>
+                        <div>Agente</div>
                         <Select
                           value={filtrosColumna.agente[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('agente', valor)}
@@ -611,8 +618,8 @@ export function Gestiones() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-20">
-                      acción
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-20">
+                      Acción
                     </th>
                   </tr>
                 </thead>
@@ -620,64 +627,64 @@ export function Gestiones() {
                   {gestionesPaginadas.map((gestion, index) => (
                     <tr
                       key={gestion.id}
-                      className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-100'} hover:bg-gray-200 transition-colors`}
                     >
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {gestion.producto}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs">
                         <div className="truncate">
                           {gestion.identificacion}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs" title={gestion.nombre}>
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs" title={gestion.nombre}>
                         <div className="truncate cursor-help">
                           {gestion.nombre}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs">
                         <div className="truncate">
                           {gestion.telefono}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs">
                         <div className="truncate">
                           {gestion.tipoContacto}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs">
                         <div className="truncate">
                           {gestion.tipificacion}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs text-right">
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs text-right">
                         <div className="truncate">
                           {gestion.montoAcuerdo > 0 ? formatearMoneda(gestion.montoAcuerdo) : '-'}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs text-center">
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs text-center">
                         <div className="truncate">
                           {gestion.cuotas > 0 ? gestion.cuotas : '-'}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs" title={gestion.observacion}>
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs" title={gestion.observacion}>
                         <div className="truncate cursor-help">
                           {gestion.observacion}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs">
                         <div className="truncate">
                           {formatearFecha(gestion.fechaGestion)}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs">
                         <div className="truncate">
                           {gestion.agente}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs text-center">
+                      <td className="border border-slate-300 px-2 py-0.5 text-xs text-center">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -694,41 +701,41 @@ export function Gestiones() {
 
               {gestionesPaginadas.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  No se encontraron gestiones con los criterios especificados
+                  {!busquedaRealizada
+                    ? 'Realice una búsqueda para ver resultados'
+                    : 'No se encontraron gestiones con los criterios especificados'}
                 </div>
               )}
             </div>
 
-            {/* Paginación */}
-            {totalPaginas > 1 && (
-              <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                <div className="text-sm text-gray-600">
-                  Página {paginaActual} de {totalPaginas}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
-                    disabled={paginaActual === 1}
-                    className="!h-7"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Anterior
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
-                    disabled={paginaActual === totalPaginas}
-                    className="!h-7"
-                  >
-                    Siguiente
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
+            {/* Paginación - Siempre visible */}
+            <div className="flex justify-between items-center mt-2 pt-2 border-t">
+              <div className="text-sm text-gray-600">
+                Página {paginaActual} de {totalPaginas || 1} | Total: {gestionesFiltradas.length} registro(s)
               </div>
-            )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+                  disabled={paginaActual === 1 || totalPaginas === 0}
+                  className="!h-7"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPaginaActual(prev => Math.min(totalPaginas || 1, prev + 1))}
+                  disabled={paginaActual === totalPaginas || totalPaginas === 0}
+                  className="!h-7"
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -749,7 +756,7 @@ export function Gestiones() {
             {gestionSeleccionada && (
               <div className="space-y-2 px-1">
                 {/* Información del Cliente */}
-                <div className="bg-sky-50 rounded-lg p-2 border-2 border-sky-300">
+                <div className="bg-sky-50 rounded-lg p-2 border-2 border-sky-500">
                   <div className="flex items-center gap-2 mb-1.5">
                     <User className="w-4 h-4 text-sky-500" />
                     <h3 className="text-sm font-bold text-slate-600">Información del Cliente</h3>
@@ -811,7 +818,7 @@ export function Gestiones() {
                   <Textarea
                     value={gestionSeleccionada.observacion}
                     readOnly
-                    className="min-h-[80px] text-xs border-slate-200 focus:border-sky-300 bg-slate-50"
+                    className="min-h-[80px] text-xs border-slate-200 focus:border-sky-500 bg-slate-50"
                   />
                 </div>
 

@@ -6,6 +6,7 @@ import { Base } from './configuracion/Base';
 import { Cargue } from './configuracion/Cargue';
 import { Plantilla } from './configuracion/Plantilla';
 import { Tipificacion } from './configuracion/Tipificacion';
+import { Building2, Package, Database, Upload, FileText, Tags } from 'lucide-react';
 
 export function Configuracion() {
   const [activeTab, setActiveTab] = useState('empresa');
@@ -22,13 +23,13 @@ export function Configuracion() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto">
-          <TabsTrigger value="empresa">Empresa</TabsTrigger>
-          <TabsTrigger value="producto">Producto</TabsTrigger>
-          <TabsTrigger value="base">Base</TabsTrigger>
-          <TabsTrigger value="cargue">Cargue</TabsTrigger>
-          <TabsTrigger value="plantilla">Plantilla</TabsTrigger>
-          <TabsTrigger value="tipificacion">Tipificación</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto bg-gray-300 p-1">
+          <TabsTrigger value="empresa" className="gap-1.5 data-[state=active]:bg-white"><Building2 className="w-4 h-4" />Empresa</TabsTrigger>
+          <TabsTrigger value="producto" className="gap-1.5 data-[state=active]:bg-white"><Package className="w-4 h-4" />Producto</TabsTrigger>
+          <TabsTrigger value="base" className="gap-1.5 data-[state=active]:bg-white"><Database className="w-4 h-4" />Base</TabsTrigger>
+          <TabsTrigger value="cargue" className="gap-1.5 data-[state=active]:bg-white"><Upload className="w-4 h-4" />Cargue</TabsTrigger>
+          <TabsTrigger value="plantilla" className="gap-1.5 data-[state=active]:bg-white"><FileText className="w-4 h-4" />Plantilla</TabsTrigger>
+          <TabsTrigger value="tipificacion" className="gap-1.5 data-[state=active]:bg-white"><Tags className="w-4 h-4" />Tipificación</TabsTrigger>
         </TabsList>
 
         <TabsContent value="empresa" className="space-y-6">

@@ -351,14 +351,14 @@ export function Acuerdos() {
   return (
     <div className="space-y-2">
       {/* Formulario de búsqueda */}
-      <Card>
+      <Card className="border-2 border-sky-400">
         <CardContent className="py-3">
           <div className="flex flex-wrap gap-2 items-end">
             {/* Buscar por */}
             <div className="w-48">
               <Label htmlFor="buscar-por">Buscar por</Label>
               <Select value={buscarPor} onValueChange={(value) => setBuscarPor(value)}>
-                <SelectTrigger id="buscar-por" className="!h-7 !py-1 text-xs">
+                <SelectTrigger id="buscar-por" className="!h-7 !py-1 text-xs border-sky-500">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -384,7 +384,7 @@ export function Acuerdos() {
                       handleBuscar();
                     }
                   }}
-                  className="h-7 text-xs"
+                  className="h-7 text-xs border-sky-500"
                 />
               </div>
             )}
@@ -399,7 +399,7 @@ export function Acuerdos() {
                     type="date"
                     value={fechaDesde}
                     onChange={(e) => setFechaDesde(e.target.value)}
-                    className="h-7 text-xs"
+                    className="h-7 text-xs border-sky-500"
                   />
                 </div>
                 <div className="w-40">
@@ -409,7 +409,7 @@ export function Acuerdos() {
                     type="date"
                     value={fechaHasta}
                     onChange={(e) => setFechaHasta(e.target.value)}
-                    className="h-7 text-xs"
+                    className="h-7 text-xs border-sky-500"
                   />
                 </div>
               </>
@@ -424,7 +424,7 @@ export function Acuerdos() {
               <div className="relative">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between font-normal h-7 text-xs">
+                    <Button variant="outline" className="w-full justify-between font-normal h-7 text-xs border-sky-500">
                       {productosSeleccionados.length === 0
                         ? 'Seleccione productos...'
                         : `${productosSeleccionados.length} seleccionado(s)`}
@@ -467,7 +467,7 @@ export function Acuerdos() {
 
       {/* Tabla de resultados */}
       {mostrarResultados && (
-        <Card>
+        <Card className="border-2 border-sky-400 bg-gray-50">
           <CardContent className="py-2 px-3">
             <div className="flex justify-end items-center mb-1">
               <span className="text-sm text-gray-600">
@@ -478,9 +478,9 @@ export function Acuerdos() {
               <table className="w-full border-collapse table-fixed">
                 <thead>
                   <tr className="bg-gray-200">
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-36">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-36">
                       <div className="space-y-1">
-                        <div>producto</div>
+                        <div>Producto</div>
                         <Select
                           value={filtrosColumna.producto[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('producto', valor)}
@@ -497,9 +497,9 @@ export function Acuerdos() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>identificación</div>
+                        <div>Identificación</div>
                         <Input
                           value={filtrosColumna.identificacion}
                           onChange={(e) => handleFiltroTexto('identificacion', e.target.value)}
@@ -508,9 +508,9 @@ export function Acuerdos() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-[130px]">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-[130px]">
                       <div className="space-y-1">
-                        <div>nombre</div>
+                        <div>Nombre</div>
                         <Input
                           value={filtrosColumna.nombre}
                           onChange={(e) => handleFiltroTexto('nombre', e.target.value)}
@@ -519,9 +519,9 @@ export function Acuerdos() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-32">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-32">
                       <div className="space-y-1">
-                        <div>cuenta</div>
+                        <div>Cuenta</div>
                         <Input
                           value={filtrosColumna.cuenta}
                           onChange={(e) => handleFiltroTexto('cuenta', e.target.value)}
@@ -530,9 +530,9 @@ export function Acuerdos() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>telefono</div>
+                        <div>Teléfono</div>
                         <Input
                           value={filtrosColumna.telefono}
                           onChange={(e) => handleFiltroTexto('telefono', e.target.value)}
@@ -541,9 +541,9 @@ export function Acuerdos() {
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>tipo contacto</div>
+                        <div>Tipo Contacto</div>
                         <Select
                           value={filtrosColumna.tipoContacto[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('tipoContacto', valor)}
@@ -560,9 +560,9 @@ export function Acuerdos() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-36">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-36">
                       <div className="space-y-1">
-                        <div>tipificación</div>
+                        <div>Tipificación</div>
                         <Select
                           value={filtrosColumna.tipificacion[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('tipificacion', valor)}
@@ -579,15 +579,15 @@ export function Acuerdos() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-20">
-                      monto acuerdo
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-20">
+                      Monto Acuerdo
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-[60px]">
-                      cuotas
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-[60px]">
+                      Cuotas
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>fecha creación</div>
+                        <div>Fecha Creación</div>
                         <Select
                           value={filtrosColumna.fechaCreacion[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('fechaCreacion', valor)}
@@ -604,9 +604,9 @@ export function Acuerdos() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-32">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-32">
                       <div className="space-y-1">
-                        <div>agente</div>
+                        <div>Agente</div>
                         <Select
                           value={filtrosColumna.agente[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('agente', valor)}
@@ -623,9 +623,9 @@ export function Acuerdos() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-28">
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-28">
                       <div className="space-y-1">
-                        <div>estado</div>
+                        <div>Estado</div>
                         <Select
                           value={filtrosColumna.estado[0] || '__todos__'}
                           onValueChange={(valor) => toggleFiltroColumna('estado', valor)}
@@ -642,8 +642,8 @@ export function Acuerdos() {
                         </Select>
                       </div>
                     </th>
-                    <th className="border border-gray-400 px-2 py-0.5 text-center text-xs font-semibold w-20">
-                      acciones
+                    <th className="border border-sky-500 px-2 py-1.5 text-center text-sm font-bold text-slate-700 w-20">
+                      Acciones
                     </th>
                   </tr>
                 </thead>
@@ -651,69 +651,69 @@ export function Acuerdos() {
                   {acuerdosPaginados.map((acuerdo, index) => (
                     <tr
                       key={acuerdo.id}
-                      className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-100'} hover:bg-gray-200 transition-colors`}
                     >
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {acuerdo.producto}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {acuerdo.identificacion}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs" title={acuerdo.nombre}>
+                      <td className="border border-slate-300 px-2 py-1 text-xs" title={acuerdo.nombre}>
                         <div className="truncate cursor-help">
                           {acuerdo.nombre}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {acuerdo.cuenta}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {acuerdo.telefono}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {acuerdo.tipoContacto}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {acuerdo.tipificacion}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs text-right">
+                      <td className="border border-slate-300 px-2 py-1 text-xs text-right">
                         <div className="truncate">
                           {formatearMoneda(acuerdo.montoAcuerdo)}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs text-center">
+                      <td className="border border-slate-300 px-2 py-1 text-xs text-center">
                         <div className="truncate">
                           {acuerdo.cuotas}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {formatearFecha(acuerdo.fechaCreacion)}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {acuerdo.agente}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs">
+                      <td className="border border-slate-300 px-2 py-1 text-xs">
                         <div className="truncate">
                           {acuerdo.estado}
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-0.5 text-xs text-center">
+                      <td className="border border-slate-300 px-2 py-1 text-xs text-center">
                         <Button
                           variant="ghost"
                           size="sm"
