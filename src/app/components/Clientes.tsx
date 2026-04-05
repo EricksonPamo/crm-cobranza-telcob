@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -21,6 +21,7 @@ import {
 } from './ui/dialog';
 import { FileText, Search, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAcuerdos } from '../context/AcuerdosContext';
 
 interface Deuda {
   cuenta: string;
@@ -124,6 +125,7 @@ const clientesSimulados: ClienteProducto[] = [
 
 export function Clientes() {
   const navigate = useNavigate();
+  const { acuerdos, preAcuerdos } = useAcuerdos();
   const [buscarPor, setBuscarPor] = useState<'identificacion' | 'cuenta' | 'nombre'>('identificacion');
   const [valorBusqueda, setValorBusqueda] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState<'activo' | 'inactivo'>('activo');
@@ -134,6 +136,38 @@ export function Clientes() {
   const [dialogoAbierto, setDialogoAbierto] = useState(false);
   const [dialogoMismoCliente, setDialogoMismoCliente] = useState(false);
   const [clientePendiente, setClientePendiente] = useState<ClienteProducto | null>(null);
+
+  // Combinar clientes simulados con acuerdos del contexto
+  const clientesConAcuerdos = useMemo(() => {
+    const todosLosAcuerdos = [...acuerdos, ...preAcuerdos];
+
+    // Crear una copia de los clientes simulados
+    const clientesActualizados = clientesSimulados.map(cliente => {
+      // Buscar acuerdos del contexto para este cliente
+      const acuerdosCliente = todosLosAcuerdos
+        .filter(a => a.identificacion === cliente.identificacion)
+        .map(a => ({
+          cuenta: a.cuenta,
+          tipoAcuerdo: a.tipoAcuerdo,
+          tipificacion: a.tipificacion,
+          montoNegociado: a.montoNegociado,
+          cuotas: a.cuotas,
+          fechaCreacion: a.fechaCreacion,
+        }));
+
+      // Si hay acuerdos del contexto, agregarlos a los existentes
+      if (acuerdosCliente.length > 0) {
+        return {
+          ...cliente,
+          acuerdos: [...cliente.acuerdos, ...acuerdosCliente],
+        };
+      }
+
+      return cliente;
+    });
+
+    return clientesActualizados;
+  }, [acuerdos, preAcuerdos]);
 
   // Limpiar sessionStorage de fichas al cargar la página
   // Solo limpiar si no hay ficha abierta (para permitir volver a la ficha)
@@ -148,13 +182,13 @@ export function Clientes() {
     }
 
     // Filtrar clientes según criterios
-    const filtrados = clientesSimulados.filter((cliente) => {
+    const filtrados = clientesConAcuerdos.filter((cliente) => {
       // Filtrar por estado
       if (cliente.estado !== estadoFiltro) return false;
 
       // Filtrar por criterio de búsqueda
       const valorLower = valorBusqueda.toLowerCase().trim();
-      
+
       switch (buscarPor) {
         case 'identificacion':
           return cliente.identificacion.includes(valorBusqueda);
@@ -169,7 +203,7 @@ export function Clientes() {
 
     setResultados(filtrados);
     setHasSearched(true);
-    
+
     if (filtrados.length === 0) {
       toast.info('No se encontraron resultados para la búsqueda');
     } else {

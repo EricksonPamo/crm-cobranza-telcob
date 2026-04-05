@@ -17,6 +17,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Search, ChevronLeft, ChevronRight, ChevronDown, Pencil } from 'lucide-react';
 import { ModalEdicionCuota } from './ModalEdicionCuota';
+import { useAcuerdos } from '../../context/AcuerdosContext';
 
 // Tipos de datos
 interface Cuota {
@@ -258,6 +259,9 @@ const cuotasSimuladas: Cuota[] = [
 ];
 
 export function Cuotas() {
+  // Hook del contexto de acuerdos
+  const { acuerdos, preAcuerdos } = useAcuerdos();
+
   // Estados del formulario de búsqueda (lo que el usuario está editando)
   const fechaActual = obtenerFechaActual();
   const [fechaDesde, setFechaDesde] = useState(fechaActual);
@@ -294,19 +298,56 @@ export function Cuotas() {
   // NOTA: Este módulo muestra las cuotas de los acuerdos aprobados.
   // Los registros se generan automáticamente según el número de cuotas definido en cada acuerdo.
 
+  // Generar cuotas a partir de los acuerdos del contexto
+  const cuotasDelContexto = useMemo(() => {
+    const cuotasGeneradas: Cuota[] = [];
+    const todosLosAcuerdos = [...acuerdos, ...preAcuerdos];
+
+    todosLosAcuerdos.forEach((acuerdo, idx) => {
+      if (acuerdo.detalleCuotas && acuerdo.detalleCuotas.length > 0) {
+        acuerdo.detalleCuotas.forEach((cuota, cuotaIdx) => {
+          cuotasGeneradas.push({
+            id: `${acuerdo.id}-CUO-${cuotaIdx + 1}`,
+            producto: acuerdo.producto,
+            identificacion: acuerdo.identificacion,
+            nombre: acuerdo.nombre,
+            cuenta: acuerdo.cuenta,
+            tipoContacto: 'Teléfono',
+            tipificacion: acuerdo.tipificacion,
+            cuota: typeof cuota.nro === 'number' ? cuota.nro : cuota.nro === 'CI' ? 0 : acuerdo.cuotas,
+            monto: cuota.montoCuota,
+            fechaVencimiento: cuota.fechaCuota,
+            agente: acuerdo.agente,
+            estado: acuerdo.estado,
+            moneda: acuerdo.moneda,
+            deudaTotal: acuerdo.deudaTotal,
+            fechaCreacion: acuerdo.fechaCreacion,
+            montoAcuerdo: acuerdo.montoNegociado,
+            totalCuotas: acuerdo.cuotas,
+          });
+        });
+      }
+    });
+
+    return cuotasGeneradas;
+  }, [acuerdos, preAcuerdos]);
+
+  // Combinar datos simulados con datos del contexto
+  const todasLasCuotas = [...cuotasSimuladas, ...cuotasDelContexto];
+
   // Obtener valores únicos para filtros (función auxiliar)
   const obtenerValoresUnicos = (campo: keyof Cuota): string[] => {
-    const valores = cuotasSimuladas.map(c => String(c[campo]));
+    const valores = todasLasCuotas.map(c => String(c[campo]));
     return [...new Set(valores)].sort();
   };
 
   // CRÍTICO: Memoizar valores únicos para evitar recalcularlos en cada render
-  const valoresUnicosProducto = useMemo(() => obtenerValoresUnicos('producto'), []);
-  const valoresUnicosTipoContacto = useMemo(() => obtenerValoresUnicos('tipoContacto'), []);
-  const valoresUnicosTipificacion = useMemo(() => obtenerValoresUnicos('tipificacion'), []);
-  const valoresUnicosFechaVencimiento = useMemo(() => obtenerValoresUnicos('fechaVencimiento'), []);
-  const valoresUnicosAgente = useMemo(() => obtenerValoresUnicos('agente'), []);
-  const valoresUnicosEstado = useMemo(() => obtenerValoresUnicos('estado'), []);
+  const valoresUnicosProducto = useMemo(() => obtenerValoresUnicos('producto'), [acuerdos, preAcuerdos]);
+  const valoresUnicosTipoContacto = useMemo(() => obtenerValoresUnicos('tipoContacto'), [acuerdos, preAcuerdos]);
+  const valoresUnicosTipificacion = useMemo(() => obtenerValoresUnicos('tipificacion'), [acuerdos, preAcuerdos]);
+  const valoresUnicosFechaVencimiento = useMemo(() => obtenerValoresUnicos('fechaVencimiento'), [acuerdos, preAcuerdos]);
+  const valoresUnicosAgente = useMemo(() => obtenerValoresUnicos('agente'), [acuerdos, preAcuerdos]);
+  const valoresUnicosEstado = useMemo(() => obtenerValoresUnicos('estado'), [acuerdos, preAcuerdos]);
 
   // Manejar selección de productos (simular multi-select básico)
   const toggleProducto = (producto: string) => {
@@ -354,7 +395,7 @@ export function Cuotas() {
 
   // Filtrar cuotas - Usa los estados APLICADOS (no los del formulario)
   const cuotasFiltradas = useMemo(() => {
-    let resultados = cuotasSimuladas;
+    let resultados = todasLasCuotas;
 
     // Aplicar búsqueda principal por fecha de vencimiento (usando valores aplicados)
     if (mostrarResultados) {
@@ -406,7 +447,7 @@ export function Cuotas() {
     }
 
     return resultados;
-  }, [mostrarResultados, fechaDesdeAplicado, fechaHastaAplicado, productosSeleccionadosAplicado, filtrosColumna]);
+  }, [todasLasCuotas, mostrarResultados, fechaDesdeAplicado, fechaHastaAplicado, productosSeleccionadosAplicado, filtrosColumna]);
 
   // Calcular paginación
   const totalPaginas = Math.ceil(cuotasFiltradas.length / registrosPorPagina);

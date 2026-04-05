@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from '../ui/textarea';
 import { Search, ChevronLeft, ChevronRight, ChevronDown, Pencil } from 'lucide-react';
 import { ModalEdicionAcuerdo } from './ModalEdicionAcuerdo';
+import { useAcuerdos } from '../../context/AcuerdosContext';
 
 // Tipos de datos
 interface Acuerdo {
@@ -152,6 +153,9 @@ const acuerdosSimulados: Acuerdo[] = [
 ];
 
 export function Acuerdos() {
+  // Hook del contexto de acuerdos
+  const { acuerdos: acuerdosContext } = useAcuerdos();
+
   // Estados del formulario de búsqueda (lo que el usuario está editando)
   const fechaActual = obtenerFechaActual();
   const [buscarPor, setBuscarPor] = useState('fechaCreacion');
@@ -193,19 +197,39 @@ export function Acuerdos() {
   // NOTA: Este módulo muestra acuerdos que fueron aprobados desde Pre-Acuerdos.
   // Los registros llegan aquí automáticamente cuando su estado cambia a "Aprobado" o "Aprobado Excepción".
 
+  // Datos combinados: simulados + contexto
+  const acuerdosDelContexto = acuerdosContext.map(acuerdo => ({
+    id: acuerdo.id,
+    producto: acuerdo.producto,
+    identificacion: acuerdo.identificacion,
+    nombre: acuerdo.nombre,
+    cuenta: acuerdo.cuenta,
+    telefono: acuerdo.telefono,
+    tipoContacto: 'Teléfono',
+    tipificacion: acuerdo.tipificacion,
+    montoAcuerdo: acuerdo.montoNegociado,
+    cuotas: acuerdo.cuotas,
+    fechaCreacion: acuerdo.fechaCreacion,
+    agente: acuerdo.agente,
+    estado: acuerdo.estado,
+    moneda: acuerdo.moneda,
+    deudaTotal: acuerdo.deudaTotal,
+  }));
+  const todosLosAcuerdos = [...acuerdosSimulados, ...acuerdosDelContexto];
+
   // Obtener valores únicos para filtros (función auxiliar)
   const obtenerValoresUnicos = (campo: keyof Acuerdo): string[] => {
-    const valores = acuerdosSimulados.map(a => String(a[campo]));
+    const valores = todosLosAcuerdos.map(a => String(a[campo]));
     return [...new Set(valores)].sort();
   };
 
   // CRÍTICO: Memoizar valores únicos para evitar recalcularlos en cada render
-  const valoresUnicosProducto = useMemo(() => obtenerValoresUnicos('producto'), []);
-  const valoresUnicosTipoContacto = useMemo(() => obtenerValoresUnicos('tipoContacto'), []);
-  const valoresUnicosTipificacion = useMemo(() => obtenerValoresUnicos('tipificacion'), []);
-  const valoresUnicosFechaCreacion = useMemo(() => obtenerValoresUnicos('fechaCreacion'), []);
-  const valoresUnicosAgente = useMemo(() => obtenerValoresUnicos('agente'), []);
-  const valoresUnicosEstado = useMemo(() => obtenerValoresUnicos('estado'), []);
+  const valoresUnicosProducto = useMemo(() => obtenerValoresUnicos('producto'), [acuerdosContext]);
+  const valoresUnicosTipoContacto = useMemo(() => obtenerValoresUnicos('tipoContacto'), [acuerdosContext]);
+  const valoresUnicosTipificacion = useMemo(() => obtenerValoresUnicos('tipificacion'), [acuerdosContext]);
+  const valoresUnicosFechaCreacion = useMemo(() => obtenerValoresUnicos('fechaCreacion'), [acuerdosContext]);
+  const valoresUnicosAgente = useMemo(() => obtenerValoresUnicos('agente'), [acuerdosContext]);
+  const valoresUnicosEstado = useMemo(() => obtenerValoresUnicos('estado'), [acuerdosContext]);
 
   // Manejar selección de productos (simular multi-select básico)
   const toggleProducto = (producto: string) => {
@@ -255,7 +279,7 @@ export function Acuerdos() {
 
   // Filtrar acuerdos - Usa los estados APLICADOS (no los del formulario)
   const acuerdosFiltrados = useMemo(() => {
-    let resultados = acuerdosSimulados;
+    let resultados = todosLosAcuerdos;
 
     // Aplicar búsqueda principal con valores aplicados
     if (mostrarResultados) {
@@ -319,7 +343,7 @@ export function Acuerdos() {
     }
 
     return resultados;
-  }, [mostrarResultados, buscarPorAplicado, valorBusquedaAplicado, fechaDesdeAplicado, fechaHastaAplicado, productosSeleccionadosAplicado, filtrosColumna]);
+  }, [todosLosAcuerdos, mostrarResultados, buscarPorAplicado, valorBusquedaAplicado, fechaDesdeAplicado, fechaHastaAplicado, productosSeleccionadosAplicado, filtrosColumna]);
 
   // Calcular paginación
   const totalPaginas = Math.ceil(acuerdosFiltrados.length / registrosPorPagina);

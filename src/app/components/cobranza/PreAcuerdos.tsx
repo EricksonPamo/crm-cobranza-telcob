@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover';
 import { Search, ChevronLeft, ChevronRight, ChevronDown, Pencil } from 'lucide-react';
 import { ModalEdicionPreAcuerdo } from './ModalEdicionPreAcuerdo';
+import { useAcuerdos } from '../../context/AcuerdosContext';
 
 // Obtener fecha actual en formato YYYY-MM-DD
 const obtenerFechaActual = () => {
@@ -165,6 +166,9 @@ const preAcuerdosSimulados: PreAcuerdo[] = [
 ];
 
 export function PreAcuerdos() {
+  // Hook del contexto de acuerdos
+  const { preAcuerdos: preAcuerdosContext } = useAcuerdos();
+
   // Estados del formulario de búsqueda (lo que el usuario está editando)
   const fechaActual = obtenerFechaActual();
   const [buscarPor, setBuscarPor] = useState('fechaCreacion');
@@ -206,19 +210,39 @@ export function PreAcuerdos() {
   // NOTA: Cuando un pre-acuerdo cambia su estado de "Creado" a "Aprobado" o "Aprobado Excepción",
   // el registro se transfiere automáticamente al módulo de Acuerdos y desaparece de este módulo.
 
+  // Datos combinados: simulados + contexto
+  const preAcuerdosDelContexto = preAcuerdosContext.map(acuerdo => ({
+    id: acuerdo.id,
+    producto: acuerdo.producto,
+    identificacion: acuerdo.identificacion,
+    nombre: acuerdo.nombre,
+    cuenta: acuerdo.cuenta,
+    telefono: acuerdo.telefono,
+    tipoContacto: 'Teléfono',
+    tipificacion: acuerdo.tipificacion,
+    montoAcuerdo: acuerdo.montoNegociado,
+    cuotas: acuerdo.cuotas,
+    fechaCreacion: acuerdo.fechaCreacion,
+    agente: acuerdo.agente,
+    estado: acuerdo.estado,
+    moneda: acuerdo.moneda,
+    deudaTotal: acuerdo.deudaTotal,
+  }));
+  const todosLosPreAcuerdos = [...preAcuerdosSimulados, ...preAcuerdosDelContexto];
+
   // Obtener valores únicos para filtros (función auxiliar)
   const obtenerValoresUnicos = (campo: keyof PreAcuerdo): string[] => {
-    const valores = preAcuerdosSimulados.map(p => String(p[campo]));
+    const valores = todosLosPreAcuerdos.map(p => String(p[campo]));
     return [...new Set(valores)].sort();
   };
 
   // CRÍTICO: Memoizar valores únicos para evitar recalcularlos en cada render
-  const valoresUnicosProducto = useMemo(() => obtenerValoresUnicos('producto'), []);
-  const valoresUnicosTipoContacto = useMemo(() => obtenerValoresUnicos('tipoContacto'), []);
-  const valoresUnicosTipificacion = useMemo(() => obtenerValoresUnicos('tipificacion'), []);
-  const valoresUnicosFechaCreacion = useMemo(() => obtenerValoresUnicos('fechaCreacion'), []);
-  const valoresUnicosAgente = useMemo(() => obtenerValoresUnicos('agente'), []);
-  const valoresUnicosEstado = useMemo(() => obtenerValoresUnicos('estado'), []);
+  const valoresUnicosProducto = useMemo(() => obtenerValoresUnicos('producto'), [preAcuerdosContext]);
+  const valoresUnicosTipoContacto = useMemo(() => obtenerValoresUnicos('tipoContacto'), [preAcuerdosContext]);
+  const valoresUnicosTipificacion = useMemo(() => obtenerValoresUnicos('tipificacion'), [preAcuerdosContext]);
+  const valoresUnicosFechaCreacion = useMemo(() => obtenerValoresUnicos('fechaCreacion'), [preAcuerdosContext]);
+  const valoresUnicosAgente = useMemo(() => obtenerValoresUnicos('agente'), [preAcuerdosContext]);
+  const valoresUnicosEstado = useMemo(() => obtenerValoresUnicos('estado'), [preAcuerdosContext]);
 
   // Manejar selección de productos (simular multi-select básico)
   const toggleProducto = (producto: string) => {
@@ -268,7 +292,7 @@ export function PreAcuerdos() {
 
   // Filtrar pre-acuerdos - Usa los estados APLICADOS (no los del formulario)
   const preAcuerdosFiltrados = useMemo(() => {
-    let resultados = preAcuerdosSimulados;
+    let resultados = todosLosPreAcuerdos;
 
     // Aplicar búsqueda principal con valores aplicados
     if (mostrarResultados) {
@@ -332,7 +356,7 @@ export function PreAcuerdos() {
     }
 
     return resultados;
-  }, [mostrarResultados, buscarPorAplicado, valorBusquedaAplicado, fechaDesdeAplicado, fechaHastaAplicado, productosSeleccionadosAplicado, filtrosColumna]);
+  }, [todosLosPreAcuerdos, mostrarResultados, buscarPorAplicado, valorBusquedaAplicado, fechaDesdeAplicado, fechaHastaAplicado, productosSeleccionadosAplicado, filtrosColumna]);
 
   // Calcular paginación
   const totalPaginas = Math.ceil(preAcuerdosFiltrados.length / registrosPorPagina);
