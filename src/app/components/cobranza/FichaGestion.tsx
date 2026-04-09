@@ -53,6 +53,9 @@ import {
   UserCircle,
   ChevronDown,
   Pencil,
+  XCircle,
+  ArrowRightFromLine,
+  Wallet,
 } from 'lucide-react';
 import { roleLabels } from '../../data/modules';
 import { ModalEdicionAcuerdo } from './ModalEdicionAcuerdo';
@@ -145,6 +148,10 @@ const formatearFecha = (fecha: string) => {
   return `${day}/${month}/${year}`;
 };
 
+const formatearFechaHora = (fechaHora: string) => {
+  return fechaHora;
+};
+
 const getEstadoAcuerdoColor = (estado: AcuerdoVigente['estado']) => {
   switch (estado) {
     case 'Aprobado':
@@ -160,7 +167,8 @@ const getEstadoAcuerdoColor = (estado: AcuerdoVigente['estado']) => {
 
 export function FichaGestion() {
   const navigate = useNavigate();
-  const [tabDerecho, setTabDerecho] = useState('info');
+  const [tabDerecho, setTabDerecho] = useState('gestiones');
+  const [filtroOrigen, setFiltroOrigen] = useState<'todos' | 'Asignacion' | 'Search' | 'SBI'>('todos');
   const [tabInferiorIzquierdo, setTabInferiorIzquierdo] = useState('gestiones-destacadas');
   const [paginaGestiones, setPaginaGestiones] = useState(1);
   const registrosPorPagina = 10;
@@ -312,6 +320,201 @@ export function FichaGestion() {
       observacion: 'El número proporcionado no existe o está cancelado',
       fechaGestion: '2026-03-11 11:20',
       agente: 'Pedro Sánchez',
+    },
+  ];
+
+  // Datos simulados de teléfonos
+  const telefonosCliente = [
+    {
+      id: '1',
+      telefono: '3101234567',
+      origen: 'Titular',
+      tipoOrigen: 'Asignacion' as const,
+      cd: 5,
+      ci: 2,
+      noc: 1,
+      inv: 0,
+      mejorGestion: { tipo: 'CD', fecha: '2026-04-02' },
+      ultimaGestion: { tipo: 'NOC', fecha: '2026-04-01' },
+    },
+    {
+      id: '2',
+      telefono: '3209876543',
+      origen: 'Referencia',
+      tipoOrigen: 'Asignacion' as const,
+      cd: 3,
+      ci: 4,
+      noc: 2,
+      inv: 1,
+      mejorGestion: { tipo: 'CI', fecha: '2026-04-01' },
+      ultimaGestion: { tipo: 'CD', fecha: '2026-03-30' },
+    },
+    {
+      id: '3',
+      telefono: '3154567890',
+      origen: 'Laboral',
+      tipoOrigen: 'Search' as const,
+      cd: 2,
+      ci: 1,
+      noc: 3,
+      inv: 0,
+      mejorGestion: { tipo: 'CD', fecha: '2026-03-28' },
+      ultimaGestion: { tipo: 'NOC', fecha: '2026-03-27' },
+    },
+    {
+      id: '4',
+      telefono: '3001112222',
+      origen: 'Titular',
+      tipoOrigen: 'Search' as const,
+      cd: 0,
+      ci: 0,
+      noc: 5,
+      inv: 2,
+      mejorGestion: { tipo: 'NOC', fecha: '2026-03-25' },
+      ultimaGestion: { tipo: 'INV', fecha: '2026-03-24' },
+    },
+    {
+      id: '5',
+      telefono: '3112223333',
+      origen: 'Referencia',
+      tipoOrigen: 'SBI' as const,
+      cd: 1,
+      ci: 3,
+      noc: 2,
+      inv: 0,
+      mejorGestion: { tipo: 'CI', fecha: '2026-03-20' },
+      ultimaGestion: { tipo: 'CD', fecha: '2026-03-19' },
+    },
+  ];
+
+  // Datos simulados de teléfonos sin gestión
+  const telefonosSinGestion = [
+    {
+      id: '1',
+      telefono: '3215551234',
+      tipoOrigen: 'Asignacion' as const,
+      fechaCarga: '2026-03-10 09:30',
+    },
+    {
+      id: '2',
+      telefono: '3109876543',
+      tipoOrigen: 'Asignacion' as const,
+      fechaCarga: '2026-03-12 14:45',
+    },
+    {
+      id: '3',
+      telefono: '3156789012',
+      tipoOrigen: 'Search' as const,
+      fechaCarga: '2026-03-08 11:20',
+    },
+    {
+      id: '4',
+      telefono: '3004567890',
+      tipoOrigen: 'Search' as const,
+      fechaCarga: '2026-03-15 16:00',
+    },
+    {
+      id: '5',
+      telefono: '3112345678',
+      tipoOrigen: 'SBI' as const,
+      fechaCarga: '2026-03-05 10:15',
+    },
+    {
+      id: '6',
+      telefono: '3201112233',
+      tipoOrigen: 'SBI' as const,
+      fechaCarga: '2026-03-18 08:30',
+    },
+  ];
+
+  // Datos simulados de historial de pagos
+  const historialPagos = [
+    {
+      id: '1',
+      cuenta: 'TC-001-2024',
+      fecha: '2026-04-01',
+      monto: 250000,
+    },
+    {
+      id: '2',
+      cuenta: 'TC-001-2024',
+      fecha: '2026-03-15',
+      monto: 500000,
+    },
+    {
+      id: '3',
+      cuenta: 'CP-045-2024',
+      fecha: '2026-03-10',
+      monto: 750000,
+    },
+    {
+      id: '4',
+      cuenta: 'TC-002-2024',
+      fecha: '2026-02-28',
+      monto: 320000,
+    },
+    {
+      id: '5',
+      cuenta: 'CP-045-2024',
+      fecha: '2026-02-15',
+      monto: 500000,
+    },
+  ];
+
+  // Datos simulados de cancelaciones
+  const cancelaciones = [
+    {
+      id: '1',
+      cuenta: 'TC-001-2024',
+      tipoAcuerdo: 'Promesa de Pago',
+      tipificacion: 'PP-001',
+      estado: 'Cancelado',
+    },
+    {
+      id: '2',
+      cuenta: 'CP-045-2024',
+      tipoAcuerdo: 'Convenio de Pago',
+      tipificacion: 'CV-002',
+      estado: 'Cancelado',
+    },
+    {
+      id: '3',
+      cuenta: 'TC-002-2024',
+      tipoAcuerdo: 'Promesa de Pago',
+      tipificacion: 'PP-003',
+      estado: 'Cancelado',
+    },
+  ];
+
+  // Datos simulados de retiros
+  const retiros = [
+    {
+      id: '1',
+      tipoRetiro: 'Cuenta',
+      valor: 'TC-001-2024',
+      fecha: '2026-03-15 10:30',
+      motivo: 'Cliente solicita baja del producto',
+    },
+    {
+      id: '2',
+      tipoRetiro: 'Telefono',
+      valor: '3101234567',
+      fecha: '2026-03-10 14:45',
+      motivo: 'Numero incorrecto',
+    },
+    {
+      id: '3',
+      tipoRetiro: 'Correo',
+      valor: 'cliente@email.com',
+      fecha: '2026-03-08 09:15',
+      motivo: 'Correo no valido',
+    },
+    {
+      id: '4',
+      tipoRetiro: 'Telefono',
+      valor: '3209876543',
+      fecha: '2026-02-28 16:00',
+      motivo: 'Telefono descontinuado',
     },
   ];
 
@@ -813,7 +1016,7 @@ export function FichaGestion() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       {/* Cabecera Superior */}
       <div className="bg-white shadow-md border-b border-slate-200">
         <div className="max-w-[1920px] mx-auto px-2 py-1.5">
@@ -879,11 +1082,11 @@ export function FichaGestion() {
       </div>
 
       {/* Contenido Principal */}
-      <div className="max-w-[1920px] mx-auto px-2 py-2">
-        <div className="flex gap-2">
+      <div className="w-full px-2 py-2 flex-1">
+        <div className="flex gap-2 h-[calc(100vh-120px)]">
           {/* Panel Izquierdo - Datos Personales */}
-          <div className="flex-none w-[250px]">
-            <Card className="shadow-md border-slate-200 h-full">
+          <div className="flex-none w-[250px] overflow-y-auto flex-shrink-0">
+            <Card className="shadow-md border-2 border-sky-400 w-full h-full">
               <CardHeader className="bg-gradient-to-r from-indigo-50 to-slate-50 !pb-0.5 pt-1.5 px-2 border-b border-slate-200">
                 <CardTitle className="text-base font-semibold text-indigo-700 flex items-center gap-1.5">
                   <User className="w-4 h-4" />
@@ -1058,9 +1261,9 @@ export function FichaGestion() {
           </div>
 
           {/* Panel Central - Cuentas y Acuerdos */}
-          <div className="flex-grow min-w-0 space-y-2">
+          <div className="flex-1 min-w-0 space-y-2 overflow-y-auto">
             {/* Tabla de Cuentas */}
-            <Card className="shadow-md border-slate-200">
+            <Card className="shadow-md border-2 border-sky-400">
               <CardHeader className="bg-gradient-to-r from-indigo-50 to-slate-50 !pb-0.5 pt-2 px-3 border-b border-slate-200">
                 <CardTitle className="text-base font-semibold text-indigo-700 flex items-center gap-1.5">
                   <CreditCard className="w-4 h-4" />
@@ -1071,40 +1274,40 @@ export function FichaGestion() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-100 hover:bg-slate-100">
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center">Cuenta</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center">Producto</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center">Moneda</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center">Deuda Total</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center">Dias Mora</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center">F. Castigo</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center">Intereses</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center">F. Ult. Pago</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center">M. Ult. Pago</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm text-center w-12">Accion</TableHead>
+                      <TableRow className="bg-gray-200">
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Cuenta</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Producto</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Moneda</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Deuda Total</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Dias Mora</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">F. Castigo</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Intereses</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">F. Ult. Pago</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">M. Ult. Pago</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm border border-sky-500 text-center w-12">Accion</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {cuentasCliente.map((cuenta) => (
-                        <TableRow key={cuenta.id} className="hover:bg-slate-50 transition-colors">
-                          <TableCell className="text-xs font-mono border-r border-slate-200 text-right">{cuenta.cuenta}</TableCell>
-                          <TableCell className="text-xs font-medium border-r border-slate-200 text-right">{cuenta.producto}</TableCell>
-                          <TableCell className="text-xs border-r border-slate-200 text-right">{cuenta.moneda}</TableCell>
-                          <TableCell className="text-xs text-right font-semibold text-slate-800 border-r border-slate-200">
+                      {cuentasCliente.map((cuenta, index) => (
+                        <TableRow key={cuenta.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-100'} hover:bg-gray-200 transition-colors`}>
+                          <TableCell className="text-xs font-mono border border-slate-300 text-right">{cuenta.cuenta}</TableCell>
+                          <TableCell className="text-xs font-medium border border-slate-300 text-right">{cuenta.producto}</TableCell>
+                          <TableCell className="text-xs border border-slate-300 text-right">{cuenta.moneda}</TableCell>
+                          <TableCell className="text-xs text-right font-semibold text-slate-800 border border-slate-300">
                             {formatearMoneda(cuenta.deudaTotal)}
                           </TableCell>
-                          <TableCell className="text-xs text-right border-r border-slate-200">
+                          <TableCell className="text-xs text-right border border-slate-300">
                             <span className="text-red-600 font-semibold">{cuenta.diasMora}</span>
                           </TableCell>
-                          <TableCell className="text-xs border-r border-slate-200 text-right">{formatearFecha(cuenta.fechaCastigo)}</TableCell>
-                          <TableCell className="text-xs text-right font-semibold text-orange-600 border-r border-slate-200">
+                          <TableCell className="text-xs border border-slate-300 text-right">{formatearFecha(cuenta.fechaCastigo)}</TableCell>
+                          <TableCell className="text-xs text-right font-semibold text-orange-600 border border-slate-300">
                             {formatearMoneda(cuenta.interesesGenerados)}
                           </TableCell>
-                          <TableCell className="text-xs border-r border-slate-200 text-right">{formatearFecha(cuenta.fechaUltimoPago)}</TableCell>
-                          <TableCell className="text-xs text-right font-semibold text-green-600 border-r border-slate-200">
+                          <TableCell className="text-xs border border-slate-300 text-right">{formatearFecha(cuenta.fechaUltimoPago)}</TableCell>
+                          <TableCell className="text-xs text-right font-semibold text-green-600 border border-slate-300">
                             {formatearMoneda(cuenta.montoUltimoPago)}
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="border border-slate-300 text-center">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1124,7 +1327,7 @@ export function FichaGestion() {
             </Card>
 
             {/* Acuerdos Vigentes */}
-            <Card className="shadow-md border-slate-200">
+            <Card className="shadow-md border-2 border-sky-400">
               <CardHeader className="bg-gradient-to-r from-green-50 to-slate-50 !pb-0.5 pt-2 px-3 border-b border-slate-200">
                 <CardTitle className="text-base font-semibold text-green-700 flex items-center gap-1.5">
                   <Handshake className="w-4 h-4" />
@@ -1137,7 +1340,7 @@ export function FichaGestion() {
                     {acuerdosVigentes.map((acuerdo) => (
                       <div
                         key={acuerdo.id}
-                        className="border border-slate-200 rounded-lg p-2 bg-gradient-to-br from-white to-slate-50 hover:shadow-md transition-shadow"
+                        className="border-2 border-sky-400 rounded-lg p-2 bg-gradient-to-br from-white to-slate-50 hover:shadow-md transition-shadow w-[80%]"
                       >
                         <div className="flex items-start justify-between mb-1.5">
                           <div className="space-y-1">
@@ -1213,7 +1416,7 @@ export function FichaGestion() {
             </Card>
 
             {/* Panel Inferior - Pestañas de Gestión */}
-            <Card className="shadow-md border-slate-200">
+            <Card className="shadow-md border-2 border-sky-400">
               <CardContent className="p-0">
                 <div className="flex flex-col">
                   {/* Fila de pestañas superior */}
@@ -1293,20 +1496,20 @@ export function FichaGestion() {
                         <div className="overflow-x-auto">
                           <Table>
                             <TableHeader>
-                              <TableRow className="bg-slate-100 hover:bg-slate-100">
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center w-12 py-1">Nro.</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[140px] py-1">Tipo</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[150px] py-1">Tipificación</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[120px] py-1">Teléfono</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center py-1">Observación</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[130px] py-1">Fecha Gestión</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[130px] py-1">Agente</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm text-center w-12 py-1">Acción</TableHead>
+                              <TableRow className="bg-gray-200">
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center w-12 py-1">Nro.</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[140px] py-1">Tipo</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[150px] py-1">Tipificación</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[120px] py-1">Teléfono</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center py-1">Observación</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[130px] py-1">Fecha Gestión</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[130px] py-1">Agente</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm border border-sky-500 text-center w-12 py-1">Acción</TableHead>
                               </TableRow>
                               {/* Fila de filtros */}
                               <TableRow className="bg-slate-50">
-                                <TableCell className="border-r border-slate-200 p-0.5"></TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5"></TableCell>
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <select
                                     value={filtroTipo}
                                     onChange={(e) => setFiltroTipo(e.target.value)}
@@ -1320,7 +1523,7 @@ export function FichaGestion() {
                                     <option value="Convenio de Pago">Convenio de Pago</option>
                                   </select>
                                 </TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <Input
                                     value={filtroTipificacion}
                                     onChange={(e) => setFiltroTipificacion(e.target.value)}
@@ -1328,7 +1531,7 @@ export function FichaGestion() {
                                     className="h-6 text-xs"
                                   />
                                 </TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <Input
                                     value={filtroTelefono}
                                     onChange={(e) => setFiltroTelefono(e.target.value)}
@@ -1336,8 +1539,8 @@ export function FichaGestion() {
                                     className="h-6 text-xs"
                                   />
                                 </TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5"></TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5"></TableCell>
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <Input
                                     value={filtroFechaGestion}
                                     onChange={(e) => setFiltroFechaGestion(e.target.value)}
@@ -1345,7 +1548,7 @@ export function FichaGestion() {
                                     className="h-6 text-xs"
                                   />
                                 </TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <Input
                                     value={filtroAgente}
                                     onChange={(e) => setFiltroAgente(e.target.value)}
@@ -1365,21 +1568,21 @@ export function FichaGestion() {
                                 </TableRow>
                               ) : (
                                 gestionesPaginadas.map((gestion, index) => (
-                                  <TableRow key={gestion.id} className="hover:bg-slate-50 transition-colors">
-                                    <TableCell className="text-xs font-medium border-r border-slate-200 text-center py-1">
+                                  <TableRow key={gestion.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-100'} hover:bg-gray-200 transition-colors`}>
+                                    <TableCell className="text-xs font-medium border border-slate-300 text-center py-1">
                                       {(paginaGestiones - 1) * registrosPorPagina + index + 1}
                                     </TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">
                                       <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${getTipoGestionColor(gestion.tipo)}`}>
                                         {gestion.tipo}
                                       </span>
                                     </TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">{gestion.tipificacion}</TableCell>
-                                    <TableCell className="text-xs font-mono border-r border-slate-200 text-center py-1">{gestion.telefono}</TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 py-1">{gestion.observacion}</TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">{gestion.fechaGestion}</TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">{gestion.agente}</TableCell>
-                                    <TableCell className="text-center py-1">
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">{gestion.tipificacion}</TableCell>
+                                    <TableCell className="text-xs font-mono border border-slate-300 text-center py-1">{gestion.telefono}</TableCell>
+                                    <TableCell className="text-xs border border-slate-300 py-1">{gestion.observacion}</TableCell>
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">{gestion.fechaGestion}</TableCell>
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">{gestion.agente}</TableCell>
+                                    <TableCell className="border border-slate-300 text-center py-1">
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -1434,24 +1637,24 @@ export function FichaGestion() {
                         <div className="overflow-x-auto">
                           <Table>
                             <TableHeader>
-                              <TableRow className="bg-slate-100 hover:bg-slate-100">
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center w-12 py-1">Nro.</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[120px] py-1">Cuenta</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[140px] py-1">Tipo</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[100px] py-1">Tipificación</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[110px] py-1">Teléfono</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[120px] py-1">Monto Acuerdo</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center w-20 py-1">Cuotas</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[130px] py-1">Fecha Creación</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[120px] py-1">Agente</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border-r border-slate-300 text-center min-w-[100px] py-1">Estado</TableHead>
-                                <TableHead className="font-semibold text-slate-700 text-sm text-center w-12 py-1">Acción</TableHead>
+                              <TableRow className="bg-gray-200">
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center w-12 py-1">Nro.</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[120px] py-1">Cuenta</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[140px] py-1">Tipo</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[100px] py-1">Tipificación</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[110px] py-1">Teléfono</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[120px] py-1">Monto Acuerdo</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center w-20 py-1">Cuotas</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[130px] py-1">Fecha Creación</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[120px] py-1">Agente</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center min-w-[100px] py-1">Estado</TableHead>
+                                <TableHead className="font-semibold text-slate-700 text-sm border border-sky-500 text-center w-12 py-1">Acción</TableHead>
                               </TableRow>
                               {/* Fila de filtros */}
                               <TableRow className="bg-slate-50">
-                                <TableCell className="border-r border-slate-200 p-0.5"></TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5"></TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5"></TableCell>
+                                <TableCell className="border border-slate-300 p-0.5"></TableCell>
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <select
                                     value={filtroHaTipo}
                                     onChange={(e) => setFiltroHaTipo(e.target.value)}
@@ -1462,7 +1665,7 @@ export function FichaGestion() {
                                     <option value="Convenio de Pago">Convenio de Pago</option>
                                   </select>
                                 </TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <Input
                                     value={filtroHaTipificacion}
                                     onChange={(e) => setFiltroHaTipificacion(e.target.value)}
@@ -1470,10 +1673,10 @@ export function FichaGestion() {
                                     className="h-6 text-xs"
                                   />
                                 </TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5"></TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5"></TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5"></TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5"></TableCell>
+                                <TableCell className="border border-slate-300 p-0.5"></TableCell>
+                                <TableCell className="border border-slate-300 p-0.5"></TableCell>
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <Input
                                     value={filtroHaFecha}
                                     onChange={(e) => setFiltroHaFecha(e.target.value)}
@@ -1481,7 +1684,7 @@ export function FichaGestion() {
                                     className="h-6 text-xs"
                                   />
                                 </TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <Input
                                     value={filtroHaAgente}
                                     onChange={(e) => setFiltroHaAgente(e.target.value)}
@@ -1489,7 +1692,7 @@ export function FichaGestion() {
                                     className="h-6 text-xs"
                                   />
                                 </TableCell>
-                                <TableCell className="border-r border-slate-200 p-0.5">
+                                <TableCell className="border border-slate-300 p-0.5">
                                   <select
                                     value={filtroHaEstado}
                                     onChange={(e) => setFiltroHaEstado(e.target.value)}
@@ -1500,7 +1703,7 @@ export function FichaGestion() {
                                     <option value="Incumplido">Incumplido</option>
                                   </select>
                                 </TableCell>
-                                <TableCell className="p-0.5"></TableCell>
+                                <TableCell className="border border-slate-300 p-0.5"></TableCell>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1512,28 +1715,28 @@ export function FichaGestion() {
                                 </TableRow>
                               ) : (
                                 historialAcuerdosPaginados.map((acuerdo, index) => (
-                                  <TableRow key={acuerdo.id} className="hover:bg-slate-50 transition-colors">
-                                    <TableCell className="text-xs font-medium border-r border-slate-200 text-center py-1">
+                                  <TableRow key={acuerdo.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-100'} hover:bg-gray-200 transition-colors`}>
+                                    <TableCell className="text-xs font-medium border border-slate-300 text-center py-1">
                                       {(paginaHistorialAcuerdos - 1) * registrosPorPagina + index + 1}
                                     </TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">{acuerdo.cuenta}</TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">{acuerdo.cuenta}</TableCell>
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">
                                       <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${getTipoGestionColor(acuerdo.tipo)}`}>
                                         {acuerdo.tipo}
                                       </span>
                                     </TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">{acuerdo.tipificacion}</TableCell>
-                                    <TableCell className="text-xs font-mono border-r border-slate-200 text-center py-1">{acuerdo.telefono}</TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center font-semibold py-1">{formatearMoneda(acuerdo.montoAcuerdo)}</TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">{acuerdo.cantidadCuotas}</TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">{acuerdo.fechaCreacion}</TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">{acuerdo.agente}</TableCell>
-                                    <TableCell className="text-xs border-r border-slate-200 text-center py-1">
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">{acuerdo.tipificacion}</TableCell>
+                                    <TableCell className="text-xs font-mono border border-slate-300 text-center py-1">{acuerdo.telefono}</TableCell>
+                                    <TableCell className="text-xs border border-slate-300 text-center font-semibold py-1">{formatearMoneda(acuerdo.montoAcuerdo)}</TableCell>
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">{acuerdo.cantidadCuotas}</TableCell>
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">{acuerdo.fechaCreacion}</TableCell>
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">{acuerdo.agente}</TableCell>
+                                    <TableCell className="text-xs border border-slate-300 text-center py-1">
                                       <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${getEstadoAcuerdoColor(acuerdo.estado)}`}>
                                         {acuerdo.estado}
                                       </span>
                                     </TableCell>
-                                    <TableCell className="text-center py-1">
+                                    <TableCell className="border border-slate-300 text-center py-1">
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -1594,7 +1797,7 @@ export function FichaGestion() {
                               value={cdTelefono}
                               onChange={(e) => setCdTelefono(e.target.value)}
                               placeholder="Ingrese teléfono"
-                              className="h-8 text-xs mt-1"
+                              className="h-7 text-xs mt-1"
                             />
                           </div>
 
@@ -1989,7 +2192,7 @@ export function FichaGestion() {
                               value={ciTelefono}
                               onChange={(e) => setCiTelefono(e.target.value)}
                               placeholder="Ingrese teléfono"
-                              className="h-8 text-xs mt-1"
+                              className="h-7 text-xs mt-1"
                             />
                           </div>
 
@@ -2181,7 +2384,7 @@ export function FichaGestion() {
                               value={ncTelefono}
                               onChange={(e) => setNcTelefono(e.target.value)}
                               placeholder="Ingrese teléfono"
-                              className="h-8 text-xs mt-1"
+                              className="h-7 text-xs mt-1"
                             />
                           </div>
 
@@ -2280,98 +2483,436 @@ export function FichaGestion() {
           </div>
 
           {/* Panel Derecho - Tabs de Informacion */}
-          <div className="flex-none w-[400px]">
-            <Card className="shadow-md border-slate-200 h-full">
+          <div className="flex-none w-[441px] overflow-y-auto flex-shrink-0">
+            <Card className="shadow-md border-2 border-sky-400 w-full h-full">
               <CardHeader className="bg-gradient-to-r from-indigo-50 to-slate-50 !pb-0.5 pt-2 px-3 border-b border-slate-200">
                 <CardTitle className="text-base font-semibold text-indigo-700 flex items-center gap-1.5">
                   <FileText className="w-4 h-4" />
                   Informacion Adicional
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <Tabs value={tabDerecho} onValueChange={setTabDerecho} className="w-full">
-                  <TabsList className="w-full justify-start rounded-none border-b bg-slate-50 h-auto p-0">
-                    <TabsTrigger
-                      value="info"
-                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:bg-white px-3 py-1.5 text-xs font-medium"
-                    >
-                      Info
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="gestiones"
-                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:bg-white px-3 py-1.5 text-xs font-medium"
-                    >
-                      Gestiones
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="documentos"
-                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:bg-white px-3 py-1.5 text-xs font-medium"
-                    >
-                      Docs
-                    </TabsTrigger>
-                  </TabsList>
+              <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
+                {/* Botones de navegación estilo tabs */}
+                <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 border-b border-slate-200 flex-shrink-0">
+                  <button
+                    onClick={() => setTabDerecho('gestiones')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border transition-colors whitespace-nowrap ${
+                      tabDerecho === 'gestiones'
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white text-slate-600 border-slate-300 hover:border-indigo-400 hover:text-indigo-600'
+                    }`}
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    Gestiones
+                  </button>
+                  <button
+                    onClick={() => setTabDerecho('telefonos')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border transition-colors whitespace-nowrap ${
+                      tabDerecho === 'telefonos'
+                        ? 'bg-green-600 text-white border-green-600'
+                        : 'bg-white text-slate-600 border-slate-300 hover:border-green-400 hover:text-green-600'
+                    }`}
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    Telefonos
+                  </button>
+                  <button
+                    onClick={() => setTabDerecho('pagos')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border transition-colors whitespace-nowrap ${
+                      tabDerecho === 'pagos'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400 hover:text-blue-600'
+                    }`}
+                  >
+                    <DollarSign className="w-3.5 h-3.5" />
+                    Pagos
+                  </button>
+                  <button
+                    onClick={() => setTabDerecho('cancelacion')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border transition-colors whitespace-nowrap ${
+                      tabDerecho === 'cancelacion'
+                        ? 'bg-red-600 text-white border-red-600'
+                        : 'bg-white text-slate-600 border-slate-300 hover:border-red-400 hover:text-red-600'
+                    }`}
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    Cancelacion
+                  </button>
+                  <button
+                    onClick={() => setTabDerecho('retiros')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border transition-colors whitespace-nowrap ${
+                      tabDerecho === 'retiros'
+                        ? 'bg-amber-600 text-white border-amber-600'
+                        : 'bg-white text-slate-600 border-slate-300 hover:border-amber-400 hover:text-amber-600'
+                    }`}
+                  >
+                    <ArrowRightFromLine className="w-3.5 h-3.5" />
+                    Retiros
+                  </button>
+                </div>
 
-                  <TabsContent value="info" className="p-2 mt-0">
-                    <ScrollArea className="h-[280px]">
+                {/* Contenido de las pestañas */}
+                <div className="p-2 flex-1 overflow-hidden">
+                  {tabDerecho === 'gestiones' && (
+                    <ScrollArea className="h-full">
                       <div className="space-y-2">
-                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Score Crediticio</p>
-                          <div className="flex items-center gap-2">
-                            <div className="text-lg font-bold text-indigo-600">720</div>
-                            <Badge className="bg-green-100 text-green-800 text-[10px]">Bueno</Badge>
-                          </div>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Deuda Total</p>
-                          <p className="text-lg font-bold text-red-600">{formatearMoneda(71800000)}</p>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">Cuentas Activas</p>
-                          <p className="text-lg font-bold text-slate-800">5</p>
-                        </div>
-                      </div>
-                    </ScrollArea>
-                  </TabsContent>
-
-                  <TabsContent value="gestiones" className="p-2 mt-0">
-                    <ScrollArea className="h-[280px]">
-                      <div className="space-y-1.5">
-                        {[1, 2, 3, 4].map((i) => (
-                          <div key={i} className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
-                            <div className="flex justify-between items-start mb-0.5">
-                              <Badge variant="outline" className="text-[10px]">
-                                {i % 2 === 0 ? 'Telefonica' : 'Email'}
-                              </Badge>
-                              <span className="text-[10px] text-slate-500">0{i}/03/2026</span>
-                            </div>
-                            <p className="text-slate-700">Gestion registrada correctamente</p>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </TabsContent>
-
-                  <TabsContent value="documentos" className="p-2 mt-0">
-                    <ScrollArea className="h-[280px]">
-                      <div className="space-y-1.5">
-                        {['Contrato', 'Cedula', 'Soporte Ingresos'].map((doc) => (
+                        {gestionesFiltradas.map((gestion) => (
                           <div
-                            key={doc}
-                            className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs flex items-center justify-between"
+                            key={gestion.id}
+                            className="p-2.5 rounded-lg border-2 border-slate-400 bg-white shadow-sm hover:shadow-md transition-shadow"
                           >
-                            <div className="flex items-center gap-1.5">
-                              <FileText className="w-3.5 h-3.5 text-slate-400" />
-                              <span>{doc}.pdf</span>
+                            {/* Primera fila: Tipo y Fecha */}
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">
+                                  Tipo Tipificacion
+                                </span>
+                                <Badge className={`${getTipoGestionColor(gestion.tipo)} text-[10px] font-medium`}>
+                                  {gestion.tipo}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-col gap-0.5 items-end">
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">
+                                  Fecha Gestion
+                                </span>
+                                <span className="text-xs font-semibold text-slate-700 font-mono">
+                                  {gestion.fechaGestion}
+                                </span>
+                              </div>
                             </div>
-                            <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px]">
-                              Ver
-                            </Button>
+
+                            {/* Segunda fila: Tipificación y Teléfono */}
+                            <div className="grid grid-cols-2 gap-3 mb-2">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">
+                                  Tipificacion
+                                </span>
+                                <span className="text-xs text-slate-700 font-medium">
+                                  {gestion.tipificacion}
+                                </span>
+                              </div>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">
+                                  Telefono
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-indigo-500" />
+                                  <span className="text-xs font-mono text-slate-700">
+                                    {gestion.telefono}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Tercera fila: Comentario */}
+                            <div className="flex flex-col gap-0.5 mb-2">
+                              <span className="text-[10px] text-slate-500 uppercase tracking-wide font-medium">
+                                Comentario
+                              </span>
+                              <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-1.5 rounded border border-slate-100">
+                                {gestion.observacion}
+                              </p>
+                            </div>
+
+                            {/* Cuarta fila: Asesor */}
+                            <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-slate-100">
+                              <UserCircle className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-[10px] text-slate-500 uppercase tracking-wide">Asesor:</span>
+                              <span className="text-xs font-medium text-slate-700">
+                                {gestion.agente}
+                              </span>
+                            </div>
                           </div>
                         ))}
+                        {gestionesFiltradas.length === 0 && (
+                          <div className="text-center py-8 text-slate-500 text-sm">
+                            No hay gestiones registradas
+                          </div>
+                        )}
                       </div>
                     </ScrollArea>
-                  </TabsContent>
-                </Tabs>
+                  )}
+
+                  {tabDerecho === 'telefonos' && (
+                    <ScrollArea className="h-full">
+                      <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="text-sm font-semibold text-slate-700">Telefonos Gestionados</h3>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-slate-600">Origen:</label>
+                            <select
+                              value={filtroOrigen}
+                              onChange={(e) => setFiltroOrigen(e.target.value as 'todos' | 'Asignacion' | 'Search' | 'SBI')}
+                              className="text-xs border border-slate-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            >
+                              <option value="todos">Todos</option>
+                              <option value="Asignacion">Asignacion</option>
+                              <option value="Search">Search</option>
+                              <option value="SBI">SBI</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-100 hover:bg-slate-100">
+                            <TableHead className="text-xs font-semibold text-slate-600 text-center py-1.5 px-1 border border-slate-300">
+                              Telefono
+                            </TableHead>
+                            <TableHead className="text-[10px] font-semibold text-slate-600 text-center py-1.5 px-1 border border-slate-300 w-10">
+                              CD
+                            </TableHead>
+                            <TableHead className="text-[10px] font-semibold text-slate-600 text-center py-1.5 px-1 border border-slate-300 w-10">
+                              CI
+                            </TableHead>
+                            <TableHead className="text-[10px] font-semibold text-slate-600 text-center py-1.5 px-1 border border-slate-300 w-10">
+                              NOC
+                            </TableHead>
+                            <TableHead className="text-xs font-semibold text-slate-600 text-center py-1.5 px-1 border border-slate-300">
+                              Mejor Gestion
+                            </TableHead>
+                            <TableHead className="text-xs font-semibold text-slate-600 text-center py-1.5 px-1 border border-slate-300">
+                              Ultima Gestion
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {telefonosCliente
+                            .filter((tel) => filtroOrigen === 'todos' || tel.tipoOrigen === filtroOrigen)
+                            .map((tel) => (
+                            <TableRow key={tel.id} className="hover:bg-slate-50">
+                              <TableCell className="text-xs text-center py-1.5 px-1 border border-slate-300">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    className="p-1 rounded hover:bg-indigo-100 text-indigo-600 transition-colors"
+                                    title="Llamar"
+                                    onClick={() => window.open(`tel:${tel.telefono}`, '_self')}
+                                  >
+                                    <Phone className="w-3.5 h-3.5" />
+                                  </button>
+                                  <span className="font-mono text-xs">{tel.telefono}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-center py-1.5 px-1 border border-slate-300">
+                                <span className={`font-semibold ${tel.cd > 0 ? 'text-green-600' : 'text-slate-400'}`}>
+                                  {tel.cd}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-xs text-center py-1.5 px-1 border border-slate-300">
+                                <span className={`font-semibold ${tel.ci > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                  {tel.ci}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-xs text-center py-1.5 px-1 border border-slate-300">
+                                <span className={`font-semibold ${tel.noc > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                  {tel.noc}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-xs text-center py-1.5 px-1 border border-slate-300">
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <Badge className={`text-[10px] ${
+                                    tel.mejorGestion.tipo === 'CD' ? 'bg-green-100 text-green-800 border-green-300' :
+                                    tel.mejorGestion.tipo === 'CI' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                                    tel.mejorGestion.tipo === 'NOC' ? 'bg-red-100 text-red-800 border-red-300' :
+                                    'bg-gray-100 text-gray-800 border-gray-300'
+                                  }`}>
+                                    {tel.mejorGestion.tipo}
+                                  </Badge>
+                                  <span className="text-[10px] text-slate-500">{tel.mejorGestion.fecha}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-center py-1.5 px-1 border border-slate-300">
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <Badge className={`text-[10px] ${
+                                    tel.ultimaGestion.tipo === 'CD' ? 'bg-green-100 text-green-800 border-green-300' :
+                                    tel.ultimaGestion.tipo === 'CI' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                                    tel.ultimaGestion.tipo === 'NOC' ? 'bg-red-100 text-red-800 border-red-300' :
+                                    'bg-gray-100 text-gray-800 border-gray-300'
+                                  }`}>
+                                    {tel.ultimaGestion.tipo}
+                                  </Badge>
+                                  <span className="text-[10px] text-slate-500">{tel.ultimaGestion.fecha}</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+
+                      {/* Telefonos sin Gestion */}
+                      <div className="px-3 py-2 border-t-2 border-slate-300 bg-slate-100 mt-3">
+                        <h3 className="text-sm font-semibold text-slate-700">Telefonos sin Gestion</h3>
+                      </div>
+                      <table className="w-auto">
+                        <thead>
+                          <tr className="bg-slate-100 hover:bg-slate-100">
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Telefono
+                            </th>
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Fecha Carga
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {telefonosSinGestion
+                            .filter((tel) => filtroOrigen === 'todos' || tel.tipoOrigen === filtroOrigen)
+                            .map((tel) => (
+                              <tr key={tel.id} className="hover:bg-slate-50">
+                                <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      className="p-1 rounded hover:bg-indigo-100 text-indigo-600 transition-colors"
+                                      title="Llamar"
+                                      onClick={() => window.open(`tel:${tel.telefono}`, '_self')}
+                                    >
+                                      <Phone className="w-3.5 h-3.5" />
+                                    </button>
+                                    <span className="font-mono text-xs">{tel.telefono}</span>
+                                  </div>
+                                </td>
+                                <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                  {formatearFechaHora(tel.fechaCarga)}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </ScrollArea>
+                  )}
+
+                  {tabDerecho === 'pagos' && (
+                    <ScrollArea className="h-full">
+                      <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
+                        <h3 className="text-sm font-semibold text-slate-700">Historial de Pagos</h3>
+                      </div>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-slate-100 hover:bg-slate-100">
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Cuenta
+                            </th>
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Fecha
+                            </th>
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Monto
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {historialPagos.map((pago) => (
+                            <tr key={pago.id} className="hover:bg-slate-50">
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                {pago.cuenta}
+                              </td>
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                {pago.fecha}
+                              </td>
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap font-semibold text-green-600">
+                                ${pago.monto.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </ScrollArea>
+                  )}
+
+                  {tabDerecho === 'cancelacion' && (
+                    <ScrollArea className="h-full">
+                      <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
+                        <h3 className="text-sm font-semibold text-slate-700">Cancelaciones</h3>
+                      </div>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-slate-100 hover:bg-slate-100">
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Cuenta
+                            </th>
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Tipo Acuerdo
+                            </th>
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Tipificacion
+                            </th>
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Estado
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cancelaciones.map((cancelacion) => (
+                            <tr key={cancelacion.id} className="hover:bg-slate-50">
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                {cancelacion.cuenta}
+                              </td>
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                {cancelacion.tipoAcuerdo}
+                              </td>
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                {cancelacion.tipificacion}
+                              </td>
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                <span className="text-red-600 font-semibold">{cancelacion.estado}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </ScrollArea>
+                  )}
+
+                  {tabDerecho === 'retiros' && (
+                    <ScrollArea className="h-full">
+                      <div className="px-3 py-2 border-b border-slate-200 bg-slate-50">
+                        <h3 className="text-sm font-semibold text-slate-700">Retiros</h3>
+                      </div>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-slate-100 hover:bg-slate-100">
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Tipo Retiro
+                            </th>
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Valor
+                            </th>
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Fecha
+                            </th>
+                            <th className="text-xs font-semibold text-slate-600 text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                              Motivo
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {retiros.map((retiro) => (
+                            <tr key={retiro.id} className="hover:bg-slate-50">
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                <Badge className={`text-[10px] ${
+                                  retiro.tipoRetiro === 'Cuenta' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                                  retiro.tipoRetiro === 'Telefono' ? 'bg-green-100 text-green-800 border-green-300' :
+                                  'bg-purple-100 text-purple-800 border-purple-300'
+                                }`}>
+                                  {retiro.tipoRetiro}
+                                </Badge>
+                              </td>
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                {retiro.valor}
+                              </td>
+                              <td className="text-xs text-center py-1.5 px-2 border border-slate-300 whitespace-nowrap">
+                                {retiro.fecha}
+                              </td>
+                              <td className="text-xs text-left py-1.5 px-2 border border-slate-300">
+                                {retiro.motivo}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </ScrollArea>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
