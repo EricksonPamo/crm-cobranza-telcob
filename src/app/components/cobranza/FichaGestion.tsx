@@ -56,6 +56,7 @@ import {
   XCircle,
   ArrowRightFromLine,
   Wallet,
+  Tag,
 } from 'lucide-react';
 import { roleLabels } from '../../data/modules';
 import { ModalEdicionAcuerdo } from './ModalEdicionAcuerdo';
@@ -89,6 +90,16 @@ interface Cuenta {
   interesesGenerados: number;
   fechaUltimoPago: string;
   montoUltimoPago: number;
+}
+
+interface Campana {
+  id: string;
+  cuenta: string;
+  fechaInicio: string;
+  fechaFin: string;
+  porcentajeDescuento: number;
+  montoCampana: number;
+  detalle: string;
 }
 
 interface AcuerdoVigente {
@@ -212,6 +223,24 @@ export function FichaGestion() {
   const [agHora, setAgHora] = useState('');
   const [agMotivo, setAgMotivo] = useState<'seguimiento' | 'recordatorio_pago' | 'negociacion'>('seguimiento');
   const [agObservacion, setAgObservacion] = useState('');
+
+  // Resetear formularios al cambiar de pestaña
+  useEffect(() => {
+    // Resetear formulario de Contacto Directo
+    setCdTelefono('');
+    setCdTipificacion('');
+    setCdRazonNoPago('');
+    setCdComentario('');
+    // Resetear formulario de Contacto Indirecto
+    setCiTelefono('');
+    setCiTipificacion('');
+    setCiVinculoCliente('');
+    setCiComentario('');
+    // Resetear formulario de No Contacto
+    setNcTelefono('');
+    setNcTipificacion('');
+    setNcComentario('');
+  }, [tabInferiorIzquierdo]);
 
   // Tipificaciones para contacto directo
   const tipificacionesContactoDirecto = [
@@ -892,10 +921,10 @@ export function FichaGestion() {
     cargo: clienteData?.cargo || datosClienteDefault.cargo,
   };
 
-  // Convertir deudas del cliente a formato de cuentas
+  // Convertir deudas del cliente a formato de cuentas (cuentas únicas e incrementales)
   const cuentasCliente: Cuenta[] = clienteData?.deudas?.map((deuda: any, index: number) => ({
     id: String(index + 1),
-    cuenta: deuda.cuenta || `CTA-${String(index + 1).padStart(6, '0')}`,
+    cuenta: `CTA-${String(index + 1).padStart(6, '0')}`,
     producto: deuda.producto || 'Préstamo Personal',
     moneda: deuda.moneda || 'PEN',
     deudaTotal: deuda.deuda || 0,
@@ -942,6 +971,45 @@ export function FichaGestion() {
       montoUltimoPago: 1200,
     },
   ];
+
+  // Campañas de descuento relacionadas a las cuentas del cliente (cada cuenta única)
+  const campanasCliente: Campana[] = clienteData?.campanas?.map((campana: any, index: number) => ({
+    id: String(index + 1),
+    cuenta: cuentasCliente[index]?.cuenta || campana.cuenta,
+    fechaInicio: campana.fechaInicio || '2026-04-01',
+    fechaFin: campana.fechaFin || '2026-04-30',
+    porcentajeDescuento: campana.porcentajeDescuento || 15,
+    montoCampana: campana.montoCampana || 0,
+    detalle: campana.detalle || 'Descuento por pronto pago',
+  })) || [
+    cuentasCliente[0] && {
+      id: '1',
+      cuenta: cuentasCliente[0].cuenta,
+      fechaInicio: '2026-04-01',
+      fechaFin: '2026-04-30',
+      porcentajeDescuento: 15,
+      montoCampana: Math.floor(cuentasCliente[0].interesesGenerados * 0.15),
+      detalle: 'Campaña de descuento por pronto pago - 15% sobre intereses',
+    },
+    cuentasCliente[1] && {
+      id: '2',
+      cuenta: cuentasCliente[1].cuenta,
+      fechaInicio: '2026-04-05',
+      fechaFin: '2026-05-15',
+      porcentajeDescuento: 20,
+      montoCampana: Math.floor(cuentasCliente[1].interesesGenerados * 0.20),
+      detalle: 'Campaña de regularización - 20% de descuento sobre capital',
+    },
+    cuentasCliente[2] && {
+      id: '3',
+      cuenta: cuentasCliente[2].cuenta,
+      fechaInicio: '2026-03-15',
+      fechaFin: '2026-06-30',
+      porcentajeDescuento: 25,
+      montoCampana: Math.floor(cuentasCliente[2].interesesGenerados * 0.25),
+      detalle: 'Campaña especial de castigo - 25% de descuento condonación',
+    },
+  ].filter(Boolean) as Campana[];
 
   // Convertir acuerdos del cliente a formato de acuerdos vigentes
   const acuerdosVigentes: AcuerdoVigente[] = clienteData?.acuerdos?.map((acuerdo: any, index: number) => ({
@@ -1270,21 +1338,21 @@ export function FichaGestion() {
                   Cuentas del Cliente
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
+              <CardContent className="px-2 py-0">
+                <div className="overflow-x-auto border border-slate-300 rounded">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-200">
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Cuenta</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Producto</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Moneda</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Deuda Total</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Dias Mora</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">F. Castigo</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">Intereses</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">F. Ult. Pago</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-sky-500 text-center">M. Ult. Pago</TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm border border-sky-500 text-center w-12">Accion</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Cuenta</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Producto</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Moneda</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Deuda Total</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Dias Mora</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">F. Castigo</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Intereses</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">F. Ult. Pago</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">M. Ult. Pago</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm border border-slate-300 text-center w-12">Accion</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1320,6 +1388,58 @@ export function FichaGestion() {
                           </TableCell>
                         </TableRow>
                       ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tabla de Campañas */}
+            <Card className="shadow-md border-2 border-sky-400">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-slate-50 !pb-0.5 pt-2 px-3 border-b border-slate-200">
+                <CardTitle className="text-base font-semibold text-amber-700 flex items-center gap-1.5">
+                  <Tag className="w-4 h-4" />
+                  Campañas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-2 py-0">
+                <div className="overflow-x-auto border border-slate-300 rounded">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-200">
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Cuenta</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Fecha Inicio</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Fecha Fin</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">% Descuento</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm whitespace-nowrap border border-slate-300 text-center">Monto Campaña</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm border border-slate-300 text-center">Detalle</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {campanasCliente.length > 0 ? (
+                        campanasCliente.map((campana, index) => (
+                          <TableRow key={campana.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-100'} hover:bg-gray-200 transition-colors`}>
+                            <TableCell className="text-xs font-mono border border-slate-300 text-right">{campana.cuenta}</TableCell>
+                            <TableCell className="text-xs border border-slate-300 text-center">{formatearFecha(campana.fechaInicio)}</TableCell>
+                            <TableCell className="text-xs border border-slate-300 text-center">{formatearFecha(campana.fechaFin)}</TableCell>
+                            <TableCell className="text-xs text-center font-semibold text-amber-600 border border-slate-300">
+                              {campana.porcentajeDescuento}%
+                            </TableCell>
+                            <TableCell className="text-xs text-right font-semibold text-green-600 border border-slate-300">
+                              {formatearMoneda(campana.montoCampana)}
+                            </TableCell>
+                            <TableCell className="text-xs border border-slate-300">
+                              <span className="text-slate-700">{campana.detalle}</span>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-slate-500 py-4 border border-slate-300">
+                            No hay campañas activas para este cliente
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </div>
