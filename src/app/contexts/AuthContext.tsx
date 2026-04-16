@@ -1,63 +1,78 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types/user';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { User, roleMapBDtoApp } from '../types/user';
+import { sql } from '../lib/db';
 
 interface AuthContextType {
   currentUser: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
+  authError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Cargar usuario desde localStorage al iniciar
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem('currentUser');
+      }
     }
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Simular autenticación - en producción esto sería una llamada a la API
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const user = users.find((u: User) => u.email === email);
+  const login = useCallback(async (username: string, _password: string): Promise<boolean> => {
+    setAuthError(null);
+    try {
+      if (!sql) {
+        throw new Error('No hay conexión a la base de datos. Verifique VITE_DATABASE_URL');
+      }
 
-    if (user) {
+      const users = await sql`
+        SELECT id, username, nombre_completo, email, tipo_usuario, estado
+        FROM perfiles_usuario
+        WHERE (username = ${username} OR email = ${username})
+          AND estado = 'activo'
+      `;
+
+      if (users.length === 0) {
+        setAuthError('Usuario no encontrado. Verifique que el usuario exista y esté activo.');
+        return false;
+      }
+
+      const dbUser = users[0];
+      const appRol = roleMapBDtoApp[dbUser.tipo_usuario] || 'cobrador';
+
+      const user: User = {
+        id: dbUser.id,
+        nombre: dbUser.nombre_completo,
+        email: dbUser.email,
+        telefono: '',
+        rol: appRol,
+        estado: dbUser.estado === 'activo' ? 'activo' : 'inactivo',
+        fechaCreacion: new Date().toISOString(),
+      };
+
       setCurrentUser(user);
       localStorage.setItem('currentUser', JSON.stringify(user));
       return true;
+    } catch (error: any) {
+      console.error('Error en login:', error);
+      setAuthError(error?.message || 'Error al conectar con el servidor. Intente nuevamente.');
+      return false;
     }
+  }, []);
 
-    // Si no hay usuarios, crear un admin por defecto
-    if (users.length === 0 && email === 'admin@crm.com' && password === 'admin123') {
-      const adminUser: User = {
-        id: '1',
-        nombre: 'Administrador',
-        email: 'admin@crm.com',
-        telefono: '+1234567890',
-        rol: 'admin',
-        estado: 'activo',
-        fechaCreacion: new Date().toISOString(),
-      };
-      
-      const newUsers = [adminUser];
-      localStorage.setItem('users', JSON.stringify(newUsers));
-      setCurrentUser(adminUser);
-      localStorage.setItem('currentUser', JSON.stringify(adminUser));
-      return true;
-    }
-
-    return false;
-  };
-
-  const logout = () => {
+  const logout = useCallback(() => {
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
-  };
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -66,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         isAuthenticated: !!currentUser,
+        authError,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-export type UserRole = 
+export type UserRole =
   | 'admin'
   | 'supervisor'
   | 'cobrador'
@@ -14,6 +14,22 @@ export interface User {
   estado: 'activo' | 'inactivo';
   fechaCreacion: string;
 }
+
+export const roleMapBDtoApp: Record<string, UserRole> = {
+  'Administrador': 'admin',
+  'Supervisor': 'supervisor',
+  'Cobrador': 'cobrador',
+  'Analista': 'analista',
+  'Contador': 'contador',
+};
+
+export const roleMapAppToBD: Record<UserRole, string> = {
+  'admin': 'Administrador',
+  'supervisor': 'Supervisor',
+  'cobrador': 'Cobrador',
+  'analista': 'Analista',
+  'contador': 'Contador',
+};
 
 export interface ModulePermission {
   id: string;

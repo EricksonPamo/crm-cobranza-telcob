@@ -8,11 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { LogIn } from 'lucide-react';
 
 export function Login() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, authError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,14 +21,14 @@ export function Login() {
     setLoading(true);
 
     try {
-      const success = await login(email, password);
+      const success = await login(username, password);
       if (success) {
         navigate('/dashboard');
       } else {
-        setError('Credenciales incorrectas');
+        setError(authError || 'Credenciales incorrectas. Verifique su usuario.');
       }
     } catch (err) {
-      setError('Error al iniciar sesión');
+      setError('Error al conectar con el servidor. Intente nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -51,13 +51,13 @@ export function Login() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Usuario</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="Usuario o email"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
@@ -81,9 +81,9 @@ export function Login() {
               {loading ? 'Ingresando...' : 'Iniciar Sesión'}
             </Button>
             <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
-              <p className="font-semibold mb-1">Credenciales por defecto:</p>
-              <p>Email: admin@crm.com</p>
-              <p>Contraseña: admin123</p>
+              <p className="font-semibold mb-1">Usuarios de prueba:</p>
+              <p>Usuario: <strong>admin</strong> | Contraseña: cualquier valor</p>
+              <p className="text-xs mt-1 text-gray-500">Autenticación básica contra base de datos</p>
             </div>
           </form>
         </CardContent>

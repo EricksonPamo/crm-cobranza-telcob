@@ -1,14 +1,15 @@
 -- =====================================================
 -- TELCOB - CRM de Cobranza
--- Script de creación de base de datos PostgreSQL
+-- Script de creación de base de datos PostgreSQL (Neon.tech)
 -- =====================================================
 
--- Eliminar tablas existentes si existen (solo para desarrollo)
-DROP TABLE IF EXISTS gestiones_cobranza CASCADE;
-DROP TABLE IF EXISTS clientes CASCADE;
-DROP TABLE IF EXISTS tipificaciones CASCADE;
-DROP TABLE IF EXISTS plantillas CASCADE;
+-- Eliminar tablas existentes si existe (orden inverso por foreign keys)
+DROP TABLE IF EXISTS campanas CASCADE;
+DROP TABLE IF EXISTS pagos CASCADE;
+DROP TABLE IF EXISTS obligaciones CASCADE;
+DROP TABLE IF EXISTS personas CASCADE;
 DROP TABLE IF EXISTS cargues CASCADE;
+DROP TABLE IF EXISTS cargue_tipo CASCADE;
 DROP TABLE IF EXISTS bases CASCADE;
 DROP TABLE IF EXISTS productos CASCADE;
 DROP TABLE IF EXISTS empresas CASCADE;
@@ -16,15 +17,17 @@ DROP TABLE IF EXISTS perfiles_usuario CASCADE;
 
 -- =====================================================
 -- TABLA: perfiles_usuario
--- Extiende la información de usuarios de Supabase Auth
+-- Usuarios del sistema
 -- =====================================================
 CREATE TABLE perfiles_usuario (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     nombre_completo VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     tipo_usuario VARCHAR(20) NOT NULL CHECK (tipo_usuario IN ('Administrador', 'Supervisor', 'Cobrador', 'Analista', 'Contador')),
     estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo')),
+    ultimo_acceso TIMESTAMP WITH TIME ZONE,
     fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     fecha_actualizacion TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -33,215 +36,366 @@ CREATE TABLE perfiles_usuario (
 CREATE INDEX idx_perfiles_usuario_tipo ON perfiles_usuario(tipo_usuario);
 CREATE INDEX idx_perfiles_usuario_estado ON perfiles_usuario(estado);
 CREATE INDEX idx_perfiles_usuario_email ON perfiles_usuario(email);
+CREATE INDEX idx_perfiles_usuario_username ON perfiles_usuario(username);
 
 -- =====================================================
 -- TABLA: empresas
 -- Almacena información de empresas cliente
 -- =====================================================
 CREATE TABLE empresas (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    codigo VARCHAR(20) UNIQUE NOT NULL,
-    razon_social VARCHAR(200) NOT NULL,
-    nit VARCHAR(20) UNIQUE NOT NULL,
-    direccion TEXT,
+    idempresa UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    razonsocial VARCHAR(200) NOT NULL,
+    ruc VARCHAR(20) UNIQUE NOT NULL,
     telefono VARCHAR(20),
+    direccion TEXT,
     email VARCHAR(100),
-    logo_url TEXT,
-    logo_storage_path TEXT,
-    usuario_creador VARCHAR(100) NOT NULL,
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    descripcion TEXT,
+    logo TEXT,
+    fechacreacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idusuario UUID NOT NULL REFERENCES perfiles_usuario(id),
+    fechamodificacion TIMESTAMP WITH TIME ZONE,
+    idusuariomod UUID NOT NULL REFERENCES perfiles_usuario(id),
     estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
 );
 
 -- Índices para empresas
-CREATE INDEX idx_empresas_codigo ON empresas(codigo);
-CREATE INDEX idx_empresas_nit ON empresas(nit);
+CREATE INDEX idx_empresas_ruc ON empresas(ruc);
 CREATE INDEX idx_empresas_estado ON empresas(estado);
-CREATE INDEX idx_empresas_razon_social ON empresas(razon_social);
+CREATE INDEX idx_empresas_razonsocial ON empresas(razonsocial);
+CREATE INDEX idx_empresas_idusuario ON empresas(idusuario);
 
 -- =====================================================
 -- TABLA: productos
--- Productos financieros asociados a empresas
+-- Productos de cobranza asociados a una empresa
 -- =====================================================
 CREATE TABLE productos (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    codigo VARCHAR(20) UNIQUE NOT NULL,
-    empresa_id UUID NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
-    nombre VARCHAR(100) NOT NULL,
-    usuario_creador VARCHAR(100) NOT NULL,
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idproducto UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre VARCHAR(200) NOT NULL,
+    idempresa UUID NOT NULL REFERENCES empresas(idempresa),
+    fechacreacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idusuario UUID NOT NULL REFERENCES perfiles_usuario(id),
+    fechamodificacion TIMESTAMP WITH TIME ZONE,
+    idusuariomod UUID NOT NULL REFERENCES perfiles_usuario(id),
     estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
 );
 
 -- Índices para productos
-CREATE INDEX idx_productos_codigo ON productos(codigo);
-CREATE INDEX idx_productos_empresa_id ON productos(empresa_id);
+CREATE INDEX idx_productos_idempresa ON productos(idempresa);
 CREATE INDEX idx_productos_estado ON productos(estado);
 CREATE INDEX idx_productos_nombre ON productos(nombre);
+CREATE INDEX idx_productos_idusuario ON productos(idusuario);
 
 -- =====================================================
 -- TABLA: bases
--- Bases de datos de cobranza
+-- Bases de cobranza asociadas a un producto
 -- =====================================================
 CREATE TABLE bases (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    codigo VARCHAR(20) UNIQUE NOT NULL,
-    producto_id UUID NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
-    nombre_base VARCHAR(200) NOT NULL,
-    alias VARCHAR(100) NOT NULL,
-    cargue_gestionar VARCHAR(50) DEFAULT 'Pendiente',
-    maximo_cuotas INTEGER NOT NULL DEFAULT 12,
-    usuario_creador VARCHAR(100) NOT NULL,
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idbase UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre VARCHAR(200) NOT NULL,
+    alias VARCHAR(100),
+    idproducto UUID NOT NULL REFERENCES productos(idproducto),
+    idcarguegestionar VARCHAR(50),
+    maximocuotas INTEGER,
+    fechacreacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idusuario UUID NOT NULL REFERENCES perfiles_usuario(id),
+    fechamodificacion TIMESTAMP WITH TIME ZONE,
+    idusuariomod UUID NOT NULL REFERENCES perfiles_usuario(id),
     estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
 );
 
 -- Índices para bases
-CREATE INDEX idx_bases_codigo ON bases(codigo);
-CREATE INDEX idx_bases_producto_id ON bases(producto_id);
+CREATE INDEX idx_bases_idproducto ON bases(idproducto);
 CREATE INDEX idx_bases_estado ON bases(estado);
+CREATE INDEX idx_bases_nombre ON bases(nombre);
+CREATE INDEX idx_bases_idusuario ON bases(idusuario);
 CREATE INDEX idx_bases_alias ON bases(alias);
-CREATE INDEX idx_bases_nombre_base ON bases(nombre_base);
+
+-- =====================================================
+-- TABLA: cargue_tipo
+-- Tipos de carga disponibles en el sistema
+-- =====================================================
+CREATE TABLE cargue_tipo (
+    idtipocargue UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre VARCHAR(200) NOT NULL,
+    fechacreacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idusuario UUID NOT NULL REFERENCES perfiles_usuario(id),
+    fechamodificacion TIMESTAMP WITH TIME ZONE,
+    idusuariomod UUID NOT NULL REFERENCES perfiles_usuario(id),
+    estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
+);
+
+-- Índices para cargue_tipo
+CREATE INDEX idx_cargue_tipo_nombre ON cargue_tipo(nombre);
+CREATE INDEX idx_cargue_tipo_estado ON cargue_tipo(estado);
+CREATE INDEX idx_cargue_tipo_idusuario ON cargue_tipo(idusuario);
 
 -- =====================================================
 -- TABLA: cargues
--- Cargues de información (obligación, pago, campaña)
+-- Cargas de información asociadas a una base
 -- =====================================================
 CREATE TABLE cargues (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    codigo VARCHAR(20) UNIQUE NOT NULL,
-    base_id UUID NOT NULL REFERENCES bases(id) ON DELETE CASCADE,
-    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('obligacion', 'pago', 'campaña')),
-    nombre_cargue VARCHAR(200) NOT NULL,
-    registros_cargados INTEGER NOT NULL DEFAULT 0,
-    archivo_nombre VARCHAR(255),
-    archivo_storage_path TEXT,
-    usuario_creador VARCHAR(100) NOT NULL,
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idcargue UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    idtipocargue UUID NOT NULL REFERENCES cargue_tipo(idtipocargue),
+    idbase UUID NOT NULL REFERENCES bases(idbase),
+    nombre VARCHAR(200) NOT NULL,
+    cantidadregistros INTEGER NOT NULL DEFAULT 0,
+    fechacreacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idusuario UUID NOT NULL REFERENCES perfiles_usuario(id),
+    fechamodificacion TIMESTAMP WITH TIME ZONE,
+    idusuariomod UUID NOT NULL REFERENCES perfiles_usuario(id),
     estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
 );
 
 -- Índices para cargues
-CREATE INDEX idx_cargues_codigo ON cargues(codigo);
-CREATE INDEX idx_cargues_base_id ON cargues(base_id);
-CREATE INDEX idx_cargues_tipo ON cargues(tipo);
+CREATE INDEX idx_cargues_idtipocargue ON cargues(idtipocargue);
+CREATE INDEX idx_cargues_idbase ON cargues(idbase);
 CREATE INDEX idx_cargues_estado ON cargues(estado);
-CREATE INDEX idx_cargues_fecha_creacion ON cargues(fecha_creacion);
+CREATE INDEX idx_cargues_nombre ON cargues(nombre);
+CREATE INDEX idx_cargues_idusuario ON cargues(idusuario);
 
 -- =====================================================
--- TABLA: plantillas
--- Plantillas de mensajes para comunicación
+-- TABLA: personas
+-- Personas (deudores/clientes) del sistema de cobranza
 -- =====================================================
-CREATE TABLE plantillas (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    codigo VARCHAR(20) UNIQUE NOT NULL,
-    nombre_plantilla VARCHAR(200) NOT NULL,
-    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('SMS', 'Email', 'WhatsApp', 'IVR')),
-    contenido TEXT NOT NULL,
-    variables_disponibles TEXT[],
-    usuario_creador VARCHAR(100) NOT NULL,
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
-);
-
--- Índices para plantillas
-CREATE INDEX idx_plantillas_codigo ON plantillas(codigo);
-CREATE INDEX idx_plantillas_tipo ON plantillas(tipo);
-CREATE INDEX idx_plantillas_estado ON plantillas(estado);
-CREATE INDEX idx_plantillas_nombre ON plantillas(nombre_plantilla);
-
--- =====================================================
--- TABLA: tipificaciones
--- Tipificaciones para clasificar gestiones de cobranza
--- =====================================================
-CREATE TABLE tipificaciones (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    codigo VARCHAR(20) UNIQUE NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    categoria VARCHAR(50) NOT NULL,
-    descripcion TEXT,
-    color VARCHAR(7), -- Color hex para UI: #RRGGBB
-    requiere_observacion BOOLEAN DEFAULT FALSE,
-    afecta_mora BOOLEAN DEFAULT FALSE,
-    usuario_creador VARCHAR(100) NOT NULL,
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
-);
-
--- Índices para tipificaciones
-CREATE INDEX idx_tipificaciones_codigo ON tipificaciones(codigo);
-CREATE INDEX idx_tipificaciones_categoria ON tipificaciones(categoria);
-CREATE INDEX idx_tipificaciones_estado ON tipificaciones(estado);
-CREATE INDEX idx_tipificaciones_nombre ON tipificaciones(nombre);
-
--- =====================================================
--- TABLA: clientes
--- Información de clientes deudores
--- =====================================================
-CREATE TABLE clientes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    numero_documento VARCHAR(50) UNIQUE NOT NULL,
-    tipo_documento VARCHAR(20) NOT NULL CHECK (tipo_documento IN ('CC', 'CE', 'NIT', 'PAS', 'TI')),
-    nombres VARCHAR(100) NOT NULL,
-    apellidos VARCHAR(100) NOT NULL,
-    email VARCHAR(100),
-    telefono_principal VARCHAR(20),
-    telefono_secundario VARCHAR(20),
-    direccion TEXT,
-    ciudad VARCHAR(100),
+CREATE TABLE personas (
+    idpersona UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    idcargue UUID NOT NULL REFERENCES cargues(idcargue),
+    tipodocumento VARCHAR(30),
+    identificacion VARCHAR(50) NOT NULL,
+    nombrecompleto VARCHAR(300),
+    nombre VARCHAR(150),
+    apellido VARCHAR(150),
+    fechanacimiento DATE,
+    edad INTEGER,
+    correo VARCHAR(200),
     departamento VARCHAR(100),
-    fecha_nacimiento DATE,
-    genero VARCHAR(10) CHECK (genero IN ('M', 'F', 'Otro')),
-    ocupacion VARCHAR(100),
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    fecha_actualizacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    provincia VARCHAR(100),
+    distrito VARCHAR(100),
+    direccion TEXT,
+    estadocivil VARCHAR(30),
+    profesion VARCHAR(100),
+    sueldo NUMERIC(15,2),
+    personadatotexto1 TEXT,
+    personadatotexto2 TEXT,
+    personadatotexto3 TEXT,
+    personadatotexto4 TEXT,
+    personadatotexto5 TEXT,
+    personadatotexto6 TEXT,
+    personadatotexto7 TEXT,
+    personadatotexto8 TEXT,
+    personadatotexto9 TEXT,
+    personadatotexto10 TEXT,
+    personadatonumerico1 NUMERIC(18,4),
+    personadatonumerico2 NUMERIC(18,4),
+    personadatonumerico3 NUMERIC(18,4),
+    personadatonumerico4 NUMERIC(18,4),
+    personadatonumerico5 NUMERIC(18,4),
+    personadatofecha1 TIMESTAMP WITH TIME ZONE,
+    personadatofecha2 TIMESTAMP WITH TIME ZONE,
+    personadatofecha3 TIMESTAMP WITH TIME ZONE,
+    personadatofecha4 TIMESTAMP WITH TIME ZONE,
+    personadatofecha5 TIMESTAMP WITH TIME ZONE,
+    fechacreacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idusuario UUID NOT NULL REFERENCES perfiles_usuario(id),
     estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
 );
 
--- Índices para clientes
-CREATE INDEX idx_clientes_numero_documento ON clientes(numero_documento);
-CREATE INDEX idx_clientes_tipo_documento ON clientes(tipo_documento);
-CREATE INDEX idx_clientes_nombres ON clientes(nombres);
-CREATE INDEX idx_clientes_apellidos ON clientes(apellidos);
-CREATE INDEX idx_clientes_email ON clientes(email);
-CREATE INDEX idx_clientes_telefono_principal ON clientes(telefono_principal);
-CREATE INDEX idx_clientes_estado ON clientes(estado);
+-- Índices para personas
+CREATE INDEX idx_personas_idcargue ON personas(idcargue);
+CREATE INDEX idx_personas_identificacion ON personas(identificacion);
+CREATE INDEX idx_personas_nombrecompleto ON personas(nombrecompleto);
+CREATE INDEX idx_personas_estado ON personas(estado);
+CREATE INDEX idx_personas_tipodocumento ON personas(tipodocumento);
+CREATE INDEX idx_personas_departamento ON personas(departamento);
+CREATE INDEX idx_personas_idusuario ON personas(idusuario);
 
 -- =====================================================
--- TABLA: gestiones_cobranza
--- Registro de gestiones de cobranza realizadas
+-- TABLA: obligaciones
+-- Obligaciones financieras (deudas) de las personas
 -- =====================================================
-CREATE TABLE gestiones_cobranza (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    cliente_id UUID NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
-    base_id UUID NOT NULL REFERENCES bases(id) ON DELETE CASCADE,
-    usuario_id UUID NOT NULL REFERENCES perfiles_usuario(id),
-    tipificacion_id UUID REFERENCES tipificaciones(id),
-    numero_obligacion VARCHAR(50) NOT NULL,
-    valor_obligacion DECIMAL(15, 2) NOT NULL,
-    saldo_actual DECIMAL(15, 2) NOT NULL,
-    dias_mora INTEGER DEFAULT 0,
-    fecha_gestion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    canal VARCHAR(20) NOT NULL CHECK (canal IN ('Telefono', 'Email', 'SMS', 'WhatsApp', 'Presencial', 'IVR')),
-    tipo_contacto VARCHAR(20) CHECK (tipo_contacto IN ('Efectivo', 'No Efectivo', 'Promesa de Pago')),
-    observaciones TEXT,
-    promesa_pago_fecha DATE,
-    promesa_pago_valor DECIMAL(15, 2),
-    acuerdo_cuotas INTEGER,
-    acuerdo_valor_cuota DECIMAL(15, 2),
-    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+CREATE TABLE obligaciones (
+    idobligacion UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    idpersona UUID NOT NULL REFERENCES personas(idpersona),
+    idcargue UUID NOT NULL REFERENCES cargues(idcargue),
+    cuenta VARCHAR(50),
+    numerotarjeta VARCHAR(50),
+    producto VARCHAR(200),
+    subproducto VARCHAR(200),
+    moneda VARCHAR(10),
+    deudatotal NUMERIC(18,4),
+    interes NUMERIC(18,4),
+    diamora INTEGER,
+    cancelaciondeuda NUMERIC(18,4),
+    obligaciondatotexto1 TEXT,
+    obligaciondatotexto2 TEXT,
+    obligaciondatotexto3 TEXT,
+    obligaciondatotexto4 TEXT,
+    obligaciondatotexto5 TEXT,
+    obligaciondatotexto6 TEXT,
+    obligaciondatotexto7 TEXT,
+    obligaciondatotexto8 TEXT,
+    obligaciondatotexto9 TEXT,
+    obligaciondatotexto10 TEXT,
+    obligaciondatotexto11 TEXT,
+    obligaciondatotexto12 TEXT,
+    obligaciondatotexto13 TEXT,
+    obligaciondatotexto14 TEXT,
+    obligaciondatotexto15 TEXT,
+    obligaciondatotexto16 TEXT,
+    obligaciondatotexto17 TEXT,
+    obligaciondatotexto18 TEXT,
+    obligaciondatotexto19 TEXT,
+    obligaciondatotexto20 TEXT,
+    obligaciondatotexto21 TEXT,
+    obligaciondatotexto22 TEXT,
+    obligaciondatotexto23 TEXT,
+    obligaciondatotexto24 TEXT,
+    obligaciondatotexto25 TEXT,
+    obligaciondatotexto26 TEXT,
+    obligaciondatotexto27 TEXT,
+    obligaciondatotexto28 TEXT,
+    obligaciondatotexto29 TEXT,
+    obligaciondatotexto30 TEXT,
+    obligaciondatotexto31 TEXT,
+    obligaciondatotexto32 TEXT,
+    obligaciondatotexto33 TEXT,
+    obligaciondatotexto34 TEXT,
+    obligaciondatotexto35 TEXT,
+    obligaciondatotexto36 TEXT,
+    obligaciondatotexto37 TEXT,
+    obligaciondatotexto38 TEXT,
+    obligaciondatotexto39 TEXT,
+    obligaciondatotexto40 TEXT,
+    obligaciondatotexto41 TEXT,
+    obligaciondatotexto42 TEXT,
+    obligaciondatotexto43 TEXT,
+    obligaciondatotexto44 TEXT,
+    obligaciondatotexto45 TEXT,
+    obligaciondatotexto46 TEXT,
+    obligaciondatotexto47 TEXT,
+    obligaciondatotexto48 TEXT,
+    obligaciondatotexto49 TEXT,
+    obligaciondatotexto50 TEXT,
+    obligaciondatonumerico1 NUMERIC(18,4),
+    obligaciondatonumerico2 NUMERIC(18,4),
+    obligaciondatonumerico3 NUMERIC(18,4),
+    obligaciondatonumerico4 NUMERIC(18,4),
+    obligaciondatonumerico5 NUMERIC(18,4),
+    obligaciondatonumerico6 NUMERIC(18,4),
+    obligaciondatonumerico7 NUMERIC(18,4),
+    obligaciondatonumerico8 NUMERIC(18,4),
+    obligaciondatonumerico9 NUMERIC(18,4),
+    obligaciondatonumerico10 NUMERIC(18,4),
+    obligaciondatofecha1 TIMESTAMP WITH TIME ZONE,
+    obligaciondatofecha2 TIMESTAMP WITH TIME ZONE,
+    obligaciondatofecha3 TIMESTAMP WITH TIME ZONE,
+    obligaciondatofecha4 TIMESTAMP WITH TIME ZONE,
+    obligaciondatofecha5 TIMESTAMP WITH TIME ZONE,
+    obligaciondatofecha6 TIMESTAMP WITH TIME ZONE,
+    obligaciondatofecha7 TIMESTAMP WITH TIME ZONE,
+    obligaciondatofecha8 TIMESTAMP WITH TIME ZONE,
+    obligaciondatofecha9 TIMESTAMP WITH TIME ZONE,
+    obligaciondatofecha10 TIMESTAMP WITH TIME ZONE,
+    fechacreacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idusuario UUID NOT NULL REFERENCES perfiles_usuario(id),
+    estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
 );
 
--- Índices para gestiones_cobranza
-CREATE INDEX idx_gestiones_cliente_id ON gestiones_cobranza(cliente_id);
-CREATE INDEX idx_gestiones_base_id ON gestiones_cobranza(base_id);
-CREATE INDEX idx_gestiones_usuario_id ON gestiones_cobranza(usuario_id);
-CREATE INDEX idx_gestiones_tipificacion_id ON gestiones_cobranza(tipificacion_id);
-CREATE INDEX idx_gestiones_numero_obligacion ON gestiones_cobranza(numero_obligacion);
-CREATE INDEX idx_gestiones_fecha_gestion ON gestiones_cobranza(fecha_gestion);
-CREATE INDEX idx_gestiones_canal ON gestiones_cobranza(canal);
-CREATE INDEX idx_gestiones_tipo_contacto ON gestiones_cobranza(tipo_contacto);
-CREATE INDEX idx_gestiones_promesa_pago_fecha ON gestiones_cobranza(promesa_pago_fecha);
+-- Índices para obligaciones
+CREATE INDEX idx_obligaciones_idpersona ON obligaciones(idpersona);
+CREATE INDEX idx_obligaciones_idcargue ON obligaciones(idcargue);
+CREATE INDEX idx_obligaciones_cuenta ON obligaciones(cuenta);
+CREATE INDEX idx_obligaciones_producto ON obligaciones(producto);
+CREATE INDEX idx_obligaciones_moneda ON obligaciones(moneda);
+CREATE INDEX idx_obligaciones_estado ON obligaciones(estado);
+CREATE INDEX idx_obligaciones_idusuario ON obligaciones(idusuario);
+
+-- =====================================================
+-- TABLA: pagos
+-- Pagos realizados por las personas
+-- =====================================================
+CREATE TABLE pagos (
+    idpago UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    idcargue UUID NOT NULL REFERENCES cargues(idcargue),
+    identificacion VARCHAR(50) NOT NULL,
+    cuenta VARCHAR(50),
+    producto VARCHAR(200),
+    subproducto VARCHAR(200),
+    fechapago DATE,
+    moneda VARCHAR(10),
+    montopago NUMERIC(18,4),
+    pagodatotexto1 TEXT,
+    pagodatotexto2 TEXT,
+    pagodatotexto3 TEXT,
+    pagodatotexto4 TEXT,
+    pagodatotexto5 TEXT,
+    pagodatotexto6 TEXT,
+    pagodatotexto7 TEXT,
+    pagodatotexto8 TEXT,
+    pagodatotexto9 TEXT,
+    pagodatotexto10 TEXT,
+    pagodatonumerico1 NUMERIC(18,4),
+    pagodatonumerico2 NUMERIC(18,4),
+    pagodatonumerico3 NUMERIC(18,4),
+    pagodatonumerico4 NUMERIC(18,4),
+    pagodatonumerico5 NUMERIC(18,4),
+    pagodatofecha1 TIMESTAMP WITH TIME ZONE,
+    pagodatofecha2 TIMESTAMP WITH TIME ZONE,
+    pagodatofecha3 TIMESTAMP WITH TIME ZONE,
+    pagodatofecha4 TIMESTAMP WITH TIME ZONE,
+    pagodatofecha5 TIMESTAMP WITH TIME ZONE,
+    fechacreacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idusuario UUID NOT NULL REFERENCES perfiles_usuario(id),
+    estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
+);
+
+-- Índices para pagos
+CREATE INDEX idx_pagos_idcargue ON pagos(idcargue);
+CREATE INDEX idx_pagos_identificacion ON pagos(identificacion);
+CREATE INDEX idx_pagos_cuenta ON pagos(cuenta);
+CREATE INDEX idx_pagos_producto ON pagos(producto);
+CREATE INDEX idx_pagos_fechapago ON pagos(fechapago);
+CREATE INDEX idx_pagos_estado ON pagos(estado);
+CREATE INDEX idx_pagos_idusuario ON pagos(idusuario);
+
+-- =====================================================
+-- TABLA: campanas
+-- Campañas de cobranza asociadas a cargues
+-- =====================================================
+CREATE TABLE campanas (
+    idcampana UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    idcargue UUID NOT NULL REFERENCES cargues(idcargue),
+    identificacion VARCHAR(50) NOT NULL,
+    cuenta VARCHAR(50),
+    porcentaje NUMERIC(5,2),
+    montocampana NUMERIC(18,4),
+    detalle TEXT,
+    campanadatotexto1 TEXT,
+    campanadatotexto2 TEXT,
+    campanadatotexto3 TEXT,
+    campanadatotexto4 TEXT,
+    campanadatotexto5 TEXT,
+    campanadatonumerico1 NUMERIC(18,4),
+    campanadatonumerico2 NUMERIC(18,4),
+    campanadatonumerico3 NUMERIC(18,4),
+    campanadatonumerico4 NUMERIC(18,4),
+    campanadatonumerico5 NUMERIC(18,4),
+    campanadatofecha1 TIMESTAMP WITH TIME ZONE,
+    campanadatofecha2 TIMESTAMP WITH TIME ZONE,
+    campanadatofecha3 TIMESTAMP WITH TIME ZONE,
+    campanadatofecha4 TIMESTAMP WITH TIME ZONE,
+    campanadatofecha5 TIMESTAMP WITH TIME ZONE,
+    fechacreacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    idusuario UUID NOT NULL REFERENCES perfiles_usuario(id),
+    estado VARCHAR(10) NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo'))
+);
+
+-- Índices para campanas
+CREATE INDEX idx_campanas_idcargue ON campanas(idcargue);
+CREATE INDEX idx_campanas_identificacion ON campanas(identificacion);
+CREATE INDEX idx_campanas_cuenta ON campanas(cuenta);
+CREATE INDEX idx_campanas_estado ON campanas(estado);
+CREATE INDEX idx_campanas_idusuario ON campanas(idusuario);
 
 -- =====================================================
 -- FUNCIONES Y TRIGGERS
@@ -262,281 +416,31 @@ CREATE TRIGGER trigger_actualizar_perfiles_usuario
     FOR EACH ROW
     EXECUTE FUNCTION actualizar_fecha_actualizacion();
 
--- Trigger para clientes
-CREATE TRIGGER trigger_actualizar_clientes
-    BEFORE UPDATE ON clientes
-    FOR EACH ROW
-    EXECUTE FUNCTION actualizar_fecha_actualizacion();
-
 -- =====================================================
--- POLÍTICAS RLS (Row Level Security)
+-- DATOS INICIALES
 -- =====================================================
 
--- Habilitar RLS en todas las tablas
-ALTER TABLE perfiles_usuario ENABLE ROW LEVEL SECURITY;
-ALTER TABLE empresas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE productos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bases ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cargues ENABLE ROW LEVEL SECURITY;
-ALTER TABLE plantillas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tipificaciones ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE gestiones_cobranza ENABLE ROW LEVEL SECURITY;
-
--- Políticas para perfiles_usuario (todos pueden leer, solo admins pueden modificar)
-CREATE POLICY "Perfiles visibles para todos los autenticados" ON perfiles_usuario
-    FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Solo admins pueden insertar perfiles" ON perfiles_usuario
-    FOR INSERT TO authenticated WITH CHECK (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario = 'Administrador')
-    );
-
-CREATE POLICY "Solo admins pueden actualizar perfiles" ON perfiles_usuario
-    FOR UPDATE TO authenticated USING (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario = 'Administrador')
-    );
-
--- Políticas para empresas
-CREATE POLICY "Empresas visibles para todos los autenticados" ON empresas
-    FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Admins y supervisores pueden crear empresas" ON empresas
-    FOR INSERT TO authenticated WITH CHECK (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario IN ('Administrador', 'Supervisor'))
-    );
-
-CREATE POLICY "Admins y supervisores pueden actualizar empresas" ON empresas
-    FOR UPDATE TO authenticated USING (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario IN ('Administrador', 'Supervisor'))
-    );
-
--- Políticas para productos
-CREATE POLICY "Productos visibles para todos los autenticados" ON productos
-    FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Admins y supervisores pueden crear productos" ON productos
-    FOR INSERT TO authenticated WITH CHECK (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario IN ('Administrador', 'Supervisor'))
-    );
-
-CREATE POLICY "Admins y supervisores pueden actualizar productos" ON productos
-    FOR UPDATE TO authenticated USING (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario IN ('Administrador', 'Supervisor'))
-    );
-
--- Políticas para bases
-CREATE POLICY "Bases visibles para todos los autenticados" ON bases
-    FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Admins y supervisores pueden crear bases" ON bases
-    FOR INSERT TO authenticated WITH CHECK (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario IN ('Administrador', 'Supervisor'))
-    );
-
-CREATE POLICY "Admins y supervisores pueden actualizar bases" ON bases
-    FOR UPDATE TO authenticated USING (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario IN ('Administrador', 'Supervisor'))
-    );
-
--- Políticas para cargues
-CREATE POLICY "Cargues visibles para todos los autenticados" ON cargues
-    FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Admins, supervisores y analistas pueden crear cargues" ON cargues
-    FOR INSERT TO authenticated WITH CHECK (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario IN ('Administrador', 'Supervisor', 'Analista'))
-    );
-
--- Políticas para plantillas
-CREATE POLICY "Plantillas visibles para todos los autenticados" ON plantillas
-    FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Admins y supervisores pueden gestionar plantillas" ON plantillas
-    FOR ALL TO authenticated USING (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario IN ('Administrador', 'Supervisor'))
-    );
-
--- Políticas para tipificaciones
-CREATE POLICY "Tipificaciones visibles para todos los autenticados" ON tipificaciones
-    FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Admins y supervisores pueden gestionar tipificaciones" ON tipificaciones
-    FOR ALL TO authenticated USING (
-        EXISTS (SELECT 1 FROM perfiles_usuario WHERE id = auth.uid() AND tipo_usuario IN ('Administrador', 'Supervisor'))
-    );
-
--- Políticas para clientes
-CREATE POLICY "Clientes visibles para todos los autenticados" ON clientes
-    FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Usuarios autenticados pueden crear clientes" ON clientes
-    FOR INSERT TO authenticated WITH CHECK (true);
-
-CREATE POLICY "Usuarios autenticados pueden actualizar clientes" ON clientes
-    FOR UPDATE TO authenticated USING (true);
-
--- Políticas para gestiones_cobranza
-CREATE POLICY "Gestiones visibles para todos los autenticados" ON gestiones_cobranza
-    FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Usuarios autenticados pueden crear gestiones" ON gestiones_cobranza
-    FOR INSERT TO authenticated WITH CHECK (true);
-
-CREATE POLICY "Solo el creador puede actualizar sus gestiones" ON gestiones_cobranza
-    FOR UPDATE TO authenticated USING (usuario_id = auth.uid());
-
--- =====================================================
--- DATOS INICIALES DE EJEMPLO
--- =====================================================
-
--- Nota: Los usuarios se crean a través de Supabase Auth
--- Aquí solo creamos los perfiles si los usuarios ya existen
-
--- COMENTARIO: Descomentar y ajustar los UUIDs después de crear usuarios en Supabase Auth
-/*
-INSERT INTO perfiles_usuario (id, username, nombre_completo, email, tipo_usuario, estado) VALUES
-('UUID_DEL_USUARIO_1', 'admin', 'Administrador Sistema', 'admin@telcob.com', 'Administrador', 'activo'),
-('UUID_DEL_USUARIO_2', 'supervisor', 'Supervisor General', 'supervisor@telcob.com', 'Supervisor', 'activo'),
-('UUID_DEL_USUARIO_3', 'cobrador1', 'Cobrador Uno', 'cobrador1@telcob.com', 'Cobrador', 'activo');
-*/
+-- Insertar usuarios por defecto
+-- Contraseña: admin123 (hash bcrypt simplificado para demo)
+INSERT INTO perfiles_usuario (username, password_hash, nombre_completo, email, tipo_usuario, estado) VALUES
+('admin', '$2a$10$YourBcryptHashHere', 'Administrador Sistema', 'admin@telcob.com', 'Administrador', 'activo'),
+('supervisor', '$2a$10$YourBcryptHashHere', 'Supervisor General', 'supervisor@telcob.com', 'Supervisor', 'activo'),
+('cobrador1', '$2a$10$YourBcryptHashHere', 'Cobrador Uno', 'cobrador1@telcob.com', 'Cobrador', 'activo');
 
 -- Insertar empresa de ejemplo
-INSERT INTO empresas (codigo, razon_social, nit, direccion, telefono, email, usuario_creador, estado) VALUES
-('1', 'Banco de Crédito y Comercio', '900123456-1', 'Calle 72 # 10-51', '6012345678', 'contacto@bcc.com', 'admin', 'activo');
+INSERT INTO empresas (razonsocial, ruc, telefono, direccion, email, descripcion, logo, idusuario, idusuariomod, estado) VALUES
+('Banco de Credito y Comercio', '900123456-1', '6012345678', 'Calle 72 # 10-51', 'contacto@bcc.com', 'Banco especializado en creditos comerciales', NULL, (SELECT id FROM perfiles_usuario WHERE username = 'admin' LIMIT 1), (SELECT id FROM perfiles_usuario WHERE username = 'admin' LIMIT 1), 'activo');
 
 -- Insertar producto de ejemplo
-INSERT INTO productos (codigo, empresa_id, nombre, usuario_creador, estado) VALUES
-('1', (SELECT id FROM empresas WHERE codigo = '1'), 'BCP Castigo', 'admin', 'activo');
+INSERT INTO productos (nombre, idempresa, idusuario, idusuariomod, estado) VALUES
+('Castigo BCP', (SELECT idempresa FROM empresas WHERE ruc = '900123456-1' LIMIT 1), (SELECT id FROM perfiles_usuario WHERE username = 'admin' LIMIT 1), (SELECT id FROM perfiles_usuario WHERE username = 'admin' LIMIT 1), 'activo');
 
 -- Insertar base de ejemplo
-INSERT INTO bases (codigo, producto_id, nombre_base, alias, cargue_gestionar, maximo_cuotas, usuario_creador, estado) VALUES
-('1', (SELECT id FROM productos WHERE codigo = '1'), 'Base de Marzo 2026', 'BCPMar2026', 'Pendiente', 12, 'admin', 'activo');
-
--- Insertar tipificaciones de ejemplo
-INSERT INTO tipificaciones (codigo, nombre, categoria, descripcion, color, requiere_observacion, afecta_mora, usuario_creador, estado) VALUES
-('1', 'Contacto Efectivo', 'Contacto', 'Se logró contactar al cliente', '#22c55e', false, false, 'admin', 'activo'),
-('2', 'Promesa de Pago', 'Compromiso', 'Cliente promete pagar en fecha específica', '#3b82f6', true, false, 'admin', 'activo'),
-('3', 'No Contesta', 'Sin Contacto', 'No se logró contacto telefónico', '#ef4444', false, false, 'admin', 'activo'),
-('4', 'Acuerdo de Pago', 'Compromiso', 'Se estableció acuerdo de pago', '#8b5cf6', true, false, 'admin', 'activo'),
-('5', 'Cliente Rechaza', 'Negativo', 'Cliente se niega a pagar', '#f59e0b', true, true, 'admin', 'activo');
-
--- Insertar plantillas de ejemplo
-INSERT INTO plantillas (codigo, nombre_plantilla, tipo, contenido, variables_disponibles, usuario_creador, estado) VALUES
-('1', 'Recordatorio de Pago SMS', 'SMS', 'Estimado {{NOMBRE}}, le recordamos que tiene una obligación pendiente por {{VALOR}}. Por favor comuníquese al {{TELEFONO}}.', ARRAY['NOMBRE', 'VALOR', 'TELEFONO', 'FECHA_VENCIMIENTO'], 'admin', 'activo'),
-('2', 'Confirmación de Promesa Email', 'Email', 'Hola {{NOMBRE}},\n\nConfirmamos su promesa de pago por {{VALOR}} para la fecha {{FECHA_PROMESA}}.\n\nGracias por su compromiso.', ARRAY['NOMBRE', 'VALOR', 'FECHA_PROMESA', 'NUMERO_OBLIGACION'], 'admin', 'activo'),
-('3', 'Notificación WhatsApp', 'WhatsApp', 'Hola {{NOMBRE}} 👋\n\nTienes una obligación pendiente:\n💰 Valor: {{VALOR}}\n📅 Vencimiento: {{FECHA_VENCIMIENTO}}\n\n¿Podemos ayudarte?', ARRAY['NOMBRE', 'VALOR', 'FECHA_VENCIMIENTO', 'SALDO'], 'admin', 'activo');
+INSERT INTO bases (nombre, alias, idproducto, maximocuotas, idusuario, idusuariomod, estado) VALUES
+('Base Marzo 2026', 'BMar2026', (SELECT idproducto FROM productos WHERE nombre = 'Castigo BCP' LIMIT 1), 36, (SELECT id FROM perfiles_usuario WHERE username = 'admin' LIMIT 1), (SELECT id FROM perfiles_usuario WHERE username = 'admin' LIMIT 1), 'activo');
 
 -- =====================================================
--- VISTAS ÚTILES
+-- COMENTARIOS
 -- =====================================================
-
--- Vista de productos con información de empresa
-CREATE OR REPLACE VIEW vista_productos_completa AS
-SELECT 
-    p.id,
-    p.codigo,
-    p.nombre AS producto_nombre,
-    p.estado AS producto_estado,
-    e.id AS empresa_id,
-    e.codigo AS empresa_codigo,
-    e.razon_social AS empresa_nombre,
-    p.usuario_creador,
-    p.fecha_creacion
-FROM productos p
-INNER JOIN empresas e ON p.empresa_id = e.id;
-
--- Vista de bases con información de producto y empresa
-CREATE OR REPLACE VIEW vista_bases_completa AS
-SELECT 
-    b.id,
-    b.codigo,
-    b.nombre_base,
-    b.alias,
-    b.cargue_gestionar,
-    b.maximo_cuotas,
-    b.estado AS base_estado,
-    p.id AS producto_id,
-    p.codigo AS producto_codigo,
-    p.nombre AS producto_nombre,
-    e.id AS empresa_id,
-    e.razon_social AS empresa_nombre,
-    b.usuario_creador,
-    b.fecha_creacion
-FROM bases b
-INNER JOIN productos p ON b.producto_id = p.id
-INNER JOIN empresas e ON p.empresa_id = e.id;
-
--- Vista de cargues con información de base
-CREATE OR REPLACE VIEW vista_cargues_completa AS
-SELECT 
-    c.id,
-    c.codigo,
-    c.tipo,
-    c.nombre_cargue,
-    c.registros_cargados,
-    c.estado AS cargue_estado,
-    b.id AS base_id,
-    b.codigo AS base_codigo,
-    b.nombre_base,
-    c.usuario_creador,
-    c.fecha_creacion
-FROM cargues c
-INNER JOIN bases b ON c.base_id = b.id;
-
--- Vista de gestiones de cobranza completa
-CREATE OR REPLACE VIEW vista_gestiones_completa AS
-SELECT 
-    g.id,
-    g.numero_obligacion,
-    g.valor_obligacion,
-    g.saldo_actual,
-    g.dias_mora,
-    g.fecha_gestion,
-    g.canal,
-    g.tipo_contacto,
-    g.observaciones,
-    g.promesa_pago_fecha,
-    g.promesa_pago_valor,
-    c.numero_documento AS cliente_documento,
-    c.nombres || ' ' || c.apellidos AS cliente_nombre_completo,
-    c.telefono_principal AS cliente_telefono,
-    b.nombre_base,
-    p.username AS usuario_gestor,
-    t.nombre AS tipificacion_nombre,
-    t.categoria AS tipificacion_categoria,
-    g.fecha_creacion
-FROM gestiones_cobranza g
-INNER JOIN clientes c ON g.cliente_id = c.id
-INNER JOIN bases b ON g.base_id = b.id
-INNER JOIN perfiles_usuario p ON g.usuario_id = p.id
-LEFT JOIN tipificaciones t ON g.tipificacion_id = t.id;
-
--- =====================================================
--- COMENTARIOS FINALES
--- =====================================================
-
--- Este script crea la estructura completa de la base de datos TELCOB
--- 
--- INSTRUCCIONES POST-INSTALACIÓN:
--- 1. Crear usuarios a través de Supabase Auth
--- 2. Insertar los perfiles de usuario en la tabla perfiles_usuario
--- 3. Configurar Storage Buckets para logos y archivos (si es necesario)
--- 4. Ajustar las políticas RLS según sus necesidades específicas
--- 5. Crear índices adicionales según los patrones de consulta
---
--- NOTAS DE SEGURIDAD:
--- - RLS está habilitado en todas las tablas
--- - Las políticas actuales son básicas, ajustar según requerimientos
--- - Considerar implementar auditoría de cambios si es necesario
--- - Los archivos deben almacenarse en Supabase Storage, no en base de datos
-
-COMMENT ON TABLE perfiles_usuario IS 'Perfiles extendidos de usuarios del sistema';
+COMMENT ON TABLE perfiles_usuario IS 'Usuarios del sistema';
 COMMENT ON TABLE empresas IS 'Empresas cliente del CRM';
-COMMENT ON TABLE productos IS 'Productos financieros de las empresas';
-COMMENT ON TABLE bases IS 'Bases de datos de cobranza';
-COMMENT ON TABLE cargues IS 'Cargues de información (obligaciones, pagos, campañas)';
-COMMENT ON TABLE plantillas IS 'Plantillas de mensajes para comunicación';
-COMMENT ON TABLE tipificaciones IS 'Tipificaciones para clasificar gestiones';
-COMMENT ON TABLE clientes IS 'Información de clientes deudores';
-COMMENT ON TABLE gestiones_cobranza IS 'Registro de gestiones de cobranza realizadas';
