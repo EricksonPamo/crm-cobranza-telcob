@@ -302,3 +302,191 @@ export async function deleteBase(idbase: string, idusuariomod: string) {
   const db = ensureConnection();
   await db`UPDATE bases SET estado = 'inactivo', fechamodificacion = NOW(), idusuariomod = ${idusuariomod} WHERE idbase = ${idbase}`;
 }
+
+// =====================================================
+// TIPOS: CargueTipo, TablaDef, DatoTipo, TablaColumna, ProductoHomologacion
+// =====================================================
+
+export interface CargueTipo {
+  idtipocargue: string;
+  nombre: string;
+  estado: string;
+}
+
+export interface TablaDef {
+  idtabla: string;
+  nombre: string;
+  estado: string;
+}
+
+export interface DatoTipo {
+  idtipodato: string;
+  nombre: string;
+  estado: string;
+}
+
+export interface TablaColumna {
+  idhomologacion: string;
+  idtipocargue: string;
+  idtabla: string;
+  nombreColumna: string;
+  idtipoDato: string;
+  esobligatorio: boolean;
+  esfiltro: boolean;
+  tipoCargueNombre: string;
+  tablaNombre: string;
+  tipoDatoNombre: string;
+}
+
+export interface ProductoHomologacion {
+  idproducto: string;
+  idhomologacion: string;
+  idtipocargue: string;
+  idtabla: string;
+  nombreColumna: string;
+  tipoDato: string;
+  obligatorio: boolean;
+  filtro: boolean;
+  nombreCampoOrigen: string | null;
+  nombreAliasOrigen: string | null;
+  fecha_creacion: string;
+  idusuariocrea: string;
+  fechamodificacion: string | null;
+  idusuariomod: string | null;
+  estado: string;
+  productoNombre: string;
+  tipoCargueNombre: string;
+  tablaNombre: string;
+  tipoDatoNombre: string;
+}
+
+export type ProductoHomologacionInput = Omit<ProductoHomologacion,
+  'fecha_creacion' | 'fechamodificacion' | 'productoNombre' | 'tipoCargueNombre' | 'tablaNombre' | 'tipoDatoNombre'
+>;
+
+// =====================================================
+// CARGUE TIPO
+// =====================================================
+
+export async function getCargueTipos() {
+  const db = ensureConnection();
+  return await db<CargueTipo[]>`SELECT * FROM cargue_tipo WHERE estado = 'activo' ORDER BY nombre`;
+}
+
+// =====================================================
+// TABLA
+// =====================================================
+
+export async function getTablas() {
+  const db = ensureConnection();
+  return await db<TablaDef[]>`SELECT * FROM tabla WHERE estado = 'activo' ORDER BY nombre`;
+}
+
+// =====================================================
+// DATO TIPO
+// =====================================================
+
+export async function getDatoTipos() {
+  const db = ensureConnection();
+  return await db<DatoTipo[]>`SELECT * FROM dato_tipo WHERE estado = 'activo' ORDER BY nombre`;
+}
+
+// =====================================================
+// TABLA COLUMNA
+// =====================================================
+
+export async function getTablaColumnaByTipoCargue(idtipocargue: string) {
+  const db = ensureConnection();
+  return await db<TablaColumna[]>`
+    SELECT tc.idhomologacion, tc.idtipocargue, tc.idtabla,
+           tc.nombrecolumna as "nombreColumna",
+           tc.idtipodato as "idtipoDato",
+           tc.esobligatorio, tc.esfiltro,
+           ct.nombre as "tipoCargueNombre",
+           t.nombre as "tablaNombre",
+           dt.nombre as "tipoDatoNombre"
+    FROM tabla_columna tc
+    JOIN cargue_tipo ct ON tc.idtipocargue = ct.idtipocargue
+    JOIN tabla t ON tc.idtabla = t.idtabla
+    JOIN dato_tipo dt ON tc.idtipodato = dt.idtipodato
+    WHERE tc.idtipocargue = ${idtipocargue}
+    ORDER BY t.nombre, tc.nombrecolumna
+  `;
+}
+
+// =====================================================
+// PRODUCTO HOMOLOGACION
+// =====================================================
+
+export async function getProductoHomologaciones() {
+  const db = ensureConnection();
+  return await db<ProductoHomologacion[]>`
+    SELECT ph.idproducto, ph.idhomologacion, ph.idtipocargue, ph.idtabla,
+           ph.nombrecolumna as "nombreColumna",
+           ph.tipodato as "tipoDato",
+           ph.obligatorio, ph.filtro,
+           ph.nombrecampoorigen as "nombreCampoOrigen",
+           ph.nombrealiasorigen as "nombreAliasOrigen",
+           ph.fecha_creacion, ph.idusuariocrea,
+           ph.fechamodificacion, ph.idusuariomod, ph.estado,
+           p.nombre as "productoNombre",
+           ct.nombre as "tipoCargueNombre",
+           t.nombre as "tablaNombre",
+           dt.nombre as "tipoDatoNombre"
+    FROM producto_homologacion ph
+    JOIN productos p ON ph.idproducto = p.idproducto
+    JOIN cargue_tipo ct ON ph.idtipocargue = ct.idtipocargue
+    JOIN tabla t ON ph.idtabla = t.idtabla
+    JOIN dato_tipo dt ON ph.tipodato = dt.idtipodato
+    WHERE ph.estado = 'activo'
+    ORDER BY p.nombre, ct.nombre, t.nombre, ph.nombrecolumna
+  `;
+}
+
+export async function createProductoHomologacionBatch(records: ProductoHomologacionInput[]) {
+  const db = ensureConnection();
+  const results = await Promise.all(
+    records.map(record =>
+      db<ProductoHomologacion[]>`
+        INSERT INTO producto_homologacion
+          (idproducto, idhomologacion, idtipocargue, idtabla, nombrecolumna,
+           tipodato, obligatorio, filtro, nombrecampoorigen, nombrealiasorigen,
+           idusuariocrea, idusuariomod, estado)
+        VALUES (${record.idproducto}, ${record.idhomologacion}, ${record.idtipocargue},
+                ${record.idtabla}, ${record.nombreColumna}, ${record.tipoDato},
+                ${record.obligatorio}, ${record.filtro}, ${record.nombreCampoOrigen},
+                ${record.nombreAliasOrigen}, ${record.idusuariocrea}, ${record.idusuariomod},
+                ${record.estado})
+        RETURNING *
+      `.then(r => r[0])
+    )
+  );
+  return results;
+}
+
+export async function updateProductoHomologacion(
+  idproducto: string,
+  idhomologacion: string,
+  data: Partial<Pick<ProductoHomologacion, 'obligatorio' | 'filtro' | 'nombreCampoOrigen' | 'nombreAliasOrigen' | 'estado'>>,
+  idusuariomod: string
+) {
+  const db = ensureConnection();
+  const result = await db<ProductoHomologacion[]>`
+    UPDATE producto_homologacion SET
+      obligatorio = COALESCE(${data.obligatorio}, obligatorio),
+      filtro = COALESCE(${data.filtro}, filtro),
+      nombrecampoorigen = COALESCE(${data.nombreCampoOrigen}, nombrecampoorigen),
+      nombrealiasorigen = COALESCE(${data.nombreAliasOrigen}, nombrealiasorigen),
+      estado = COALESCE(${data.estado}, estado),
+      fechamodificacion = NOW(),
+      idusuariomod = ${idusuariomod}
+    WHERE idproducto = ${idproducto} AND idhomologacion = ${idhomologacion}
+    RETURNING *
+  `;
+  return result[0];
+}
+
+export async function deleteProductoHomologacion(idproducto: string, idhomologacion: string, idusuariomod: string) {
+  const db = ensureConnection();
+  await db`UPDATE producto_homologacion SET estado = 'inactivo', fechamodificacion = NOW(), idusuariomod = ${idusuariomod} WHERE idproducto = ${idproducto} AND idhomologacion = ${idhomologacion}`;
+}

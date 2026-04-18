@@ -5,6 +5,12 @@ import {
   Empresa,
   Producto,
   Base,
+  CargueTipo,
+  TablaDef,
+  DatoTipo,
+  TablaColumna,
+  ProductoHomologacion,
+  ProductoHomologacionInput,
   getUsuarios,
   getUsuarioById,
   getUsuarioByUsername,
@@ -27,6 +33,14 @@ import {
   createBase,
   updateBase,
   deleteBase,
+  getCargueTipos,
+  getTablas,
+  getDatoTipos,
+  getTablaColumnaByTipoCargue,
+  getProductoHomologaciones,
+  createProductoHomologacionBatch,
+  updateProductoHomologacion,
+  deleteProductoHomologacion,
 } from '../lib/db';
 
 interface DatabaseContextType {
@@ -53,6 +67,14 @@ interface DatabaseContextType {
   createBase: (data: Omit<Base, 'idbase' | 'fechacreacion' | 'fechamodificacion'>) => Promise<Base>;
   updateBase: (idbase: string, data: Partial<Base>, idusuariomod: string) => Promise<Base>;
   deleteBase: (idbase: string, idusuariomod: string) => Promise<void>;
+  getCargueTipos: () => Promise<CargueTipo[]>;
+  getTablas: () => Promise<TablaDef[]>;
+  getDatoTipos: () => Promise<DatoTipo[]>;
+  getTablaColumnaByTipoCargue: (idtipocargue: string) => Promise<TablaColumna[]>;
+  getProductoHomologaciones: () => Promise<ProductoHomologacion[]>;
+  createProductoHomologacionBatch: (records: ProductoHomologacionInput[]) => Promise<ProductoHomologacion[]>;
+  updateProductoHomologacion: (idproducto: string, idhomologacion: string, data: Partial<Pick<ProductoHomologacion, 'obligatorio' | 'filtro' | 'nombreCampoOrigen' | 'nombreAliasOrigen' | 'estado'>>, idusuariomod: string) => Promise<ProductoHomologacion>;
+  deleteProductoHomologacion: (idproducto: string, idhomologacion: string, idusuariomod: string) => Promise<void>;
 }
 
 const DatabaseContext = createContext<DatabaseContextType | null>(null);
@@ -64,6 +86,9 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     getEmpresas, getEmpresaById, getEmpresaByRuc, createEmpresa, updateEmpresa, deleteEmpresa,
     getProductos, getProductoById, createProducto, updateProducto, deleteProducto,
     getBases, getBaseById, createBase, updateBase, deleteBase,
+    getCargueTipos, getTablas, getDatoTipos, getTablaColumnaByTipoCargue,
+    getProductoHomologaciones, createProductoHomologacionBatch,
+    updateProductoHomologacion, deleteProductoHomologacion,
   };
 
   return (
