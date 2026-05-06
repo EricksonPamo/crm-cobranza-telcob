@@ -73,7 +73,7 @@ export interface Base {
   alias: string | null;
   idproducto: string;
   productonombre: string;
-  idcarguegestionar: string | null;
+  idcarguegestionar: number | null;
   maximocuotas: number | null;
   fechacreacion: string;
   idusuario: string;
@@ -313,6 +313,23 @@ export interface CargueTipo {
   estado: string;
 }
 
+export interface Cargue {
+  idcargue: number;
+  idtipocargue: string;
+  idbase: string;
+  nombrearchivo: string;
+  cantidadregistros: number;
+  fechacreacion: string;
+  idusuario: string;
+  fechamodificacion: string | null;
+  idusuariomod: string | null;
+  estado: string;
+  productoNombre: string;
+  baseNombre: string;
+  tipoCargueNombre: string;
+  usuarioNombre: string;
+}
+
 export interface TablaDef {
   idtabla: string;
   nombre: string;
@@ -489,4 +506,196 @@ export async function updateProductoHomologacion(
 export async function deleteProductoHomologacion(idproducto: string, idhomologacion: string, idusuariomod: string) {
   const db = ensureConnection();
   await db`UPDATE producto_homologacion SET estado = 'inactivo', fechamodificacion = NOW(), idusuariomod = ${idusuariomod} WHERE idproducto = ${idproducto} AND idhomologacion = ${idhomologacion}`;
+}
+
+// =====================================================
+// CARGUES
+// =====================================================
+
+export async function getCarguesByProducto(idproducto: string) {
+  const db = ensureConnection();
+  return await db<Cargue[]>`
+    SELECT c.idcargue, c.idtipocargue, c.idbase,
+           c.nombrearchivo, c.cantidadregistros,
+           c.fechacreacion, c.idusuario, c.fechamodificacion, c.idusuariomod, c.estado,
+           p.nombre as "productoNombre",
+           b.nombre as "baseNombre",
+           ct.nombre as "tipoCargueNombre",
+           pu.nombre_completo as "usuarioNombre"
+    FROM cargues c
+    JOIN bases b ON c.idbase = b.idbase
+    JOIN productos p ON b.idproducto = p.idproducto
+    JOIN cargue_tipo ct ON c.idtipocargue = ct.idtipocargue
+    JOIN perfiles_usuario pu ON c.idusuario = pu.id
+    WHERE b.idproducto = ${idproducto}
+    ORDER BY c.fechacreacion DESC
+  `;
+}
+
+export async function createCargue(data: {
+  idtipocargue: string;
+  idbase: string;
+  nombrearchivo: string;
+  cantidadregistros: number;
+  idusuario: string;
+  idusuariomod: string;
+  estado: string;
+}) {
+  const db = ensureConnection();
+  const result = await db<{ idcargue: number }[]>`
+    INSERT INTO cargues (idtipocargue, idbase, nombre, nombrearchivo, cantidadregistros, idusuario, idusuariomod, estado)
+    VALUES (${data.idtipocargue}, ${data.idbase}, ${data.nombrearchivo}, ${data.nombrearchivo}, ${data.cantidadregistros}, ${data.idusuario}, ${data.idusuariomod}, ${data.estado})
+    RETURNING idcargue
+  `;
+  return result[0];
+}
+
+export async function inactivateCarguesByTipoCargue(idbase: string, idtipocargue: string, excludeIdcargue: number, idusuariomod: string) {
+  const db = ensureConnection();
+  await db`
+    UPDATE cargues SET estado = 'inactivo', fechamodificacion = NOW(), idusuariomod = ${idusuariomod}
+    WHERE idbase = ${idbase} AND idtipocargue = ${idtipocargue} AND idcargue != ${excludeIdcargue} AND estado = 'activo'
+  `;
+}
+
+export async function updateBaseCargueGestionar(idbase: string, idcarguegestionar: number | null, idusuariomod: string) {
+  const db = ensureConnection();
+  await db`
+    UPDATE bases SET idcarguegestionar = ${idcarguegestionar}, fechamodificacion = NOW(), idusuariomod = ${idusuariomod}
+    WHERE idbase = ${idbase}
+  `;
+}
+
+export async function getCarguesActivosObligacion(idbase: string) {
+  const db = ensureConnection();
+  return await db<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>`
+    SELECT c.idcargue, c.nombrearchivo, c.cantidadregistros
+    FROM cargues c
+    JOIN cargue_tipo ct ON c.idtipocargue = ct.idtipocargue
+    WHERE c.idbase = ${idbase} AND c.estado = 'activo' AND LOWER(ct.nombre) = 'obligacion'
+    ORDER BY c.fechacreacion DESC
+  `;
+}
+
+// =====================================================
+// BATCH INSERT: Personas y Obligaciones
+// =====================================================
+
+const PERSONAS_COLUMNS = [
+  'idcargue', 'tipodocumento', 'identificacion', 'nombrecompleto', 'nombre', 'apellido',
+  'correo', 'departamento', 'provincia', 'distrito', 'direccion', 'estadocivil', 'profesion',
+  'personadatotexto1', 'personadatotexto2', 'personadatotexto3', 'personadatotexto4', 'personadatotexto5',
+  'personadatotexto6', 'personadatotexto7', 'personadatotexto8', 'personadatotexto9', 'personadatotexto10',
+  'idusuario', 'estado',
+];
+
+const OBLIGACIONES_COLUMNS = [
+  'idpersona', 'idcargue', 'cuenta', 'numerotarjeta', 'producto', 'subproducto',
+  'moneda', 'deudatotal', 'interes', 'diamora', 'cancelaciondeuda',
+  'obligaciondatotexto1', 'obligaciondatotexto2', 'obligaciondatotexto3',
+  'obligaciondatotexto4', 'obligaciondatotexto5', 'obligaciondatotexto6',
+  'obligaciondatotexto7', 'obligaciondatotexto8', 'obligaciondatotexto9',
+  'obligaciondatotexto10', 'obligaciondatotexto11', 'obligaciondatotexto12',
+  'obligaciondatotexto13', 'obligaciondatotexto14', 'obligaciondatotexto15',
+  'obligaciondatotexto16', 'obligaciondatotexto17', 'obligaciondatotexto18',
+  'obligaciondatotexto19', 'obligaciondatotexto20', 'obligaciondatotexto21',
+  'obligaciondatotexto22', 'obligaciondatotexto23', 'obligaciondatotexto24',
+  'obligaciondatotexto25', 'obligaciondatotexto26', 'obligaciondatotexto27',
+  'obligaciondatotexto28', 'obligaciondatotexto29', 'obligaciondatotexto30',
+  'obligaciondatotexto31', 'obligaciondatotexto32', 'obligaciondatotexto33',
+  'obligaciondatotexto34', 'obligaciondatotexto35', 'obligaciondatotexto36',
+  'obligaciondatotexto37', 'obligaciondatotexto38', 'obligaciondatotexto39',
+  'obligaciondatotexto40', 'obligaciondatotexto41', 'obligaciondatotexto42',
+  'obligaciondatotexto43', 'obligaciondatotexto44', 'obligaciondatotexto45',
+  'obligaciondatotexto46', 'obligaciondatotexto47', 'obligaciondatotexto48',
+  'obligaciondatotexto49', 'obligaciondatotexto50',
+  'idusuario', 'estado',
+];
+
+function buildMultiRowInsert(tableName: string, columns: string[], batch: Record<string, any>[][]): { query: string; params: any[] } {
+  const params: any[] = [];
+  const valueRows: string[] = [];
+
+  for (const row of batch) {
+    const rowPlaceholders: string[] = [];
+    for (const col of columns) {
+      const paramIdx = params.length + 1;
+      const val = row[col];
+      if (val === undefined || val === null || val === '') {
+        params.push(null);
+      } else {
+        params.push(val);
+      }
+      rowPlaceholders.push(`$${paramIdx}`);
+    }
+    valueRows.push(`(${rowPlaceholders.join(',')})`);
+  }
+
+  const query = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES ${valueRows.join(',')}`;
+  return { query, params };
+}
+
+export async function batchInsertPersonas(rows: Record<string, any>[], batchSize = 500, onProgress?: (done: number, total: number) => void) {
+  const db = ensureConnection();
+  const total = rows.length;
+  for (let i = 0; i < total; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const { query, params } = buildMultiRowInsert('personas', PERSONAS_COLUMNS, batch);
+    await db.unsafe(query, params);
+    if (onProgress) onProgress(Math.min(i + batchSize, total), total);
+  }
+}
+
+export async function batchInsertObligaciones(rows: Record<string, any>[], batchSize = 500, onProgress?: (done: number, total: number) => void) {
+  const db = ensureConnection();
+  const total = rows.length;
+  for (let i = 0; i < total; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const { query, params } = buildMultiRowInsert('obligaciones', OBLIGACIONES_COLUMNS, batch);
+    await db.unsafe(query, params);
+    if (onProgress) onProgress(Math.min(i + batchSize, total), total);
+  }
+}
+
+export async function getPersonasIdByCargue(idcargue: number) {
+  const db = ensureConnection();
+  return await db<{ idpersona: string; identificacion: string }[]>`
+    SELECT idpersona, identificacion FROM personas WHERE idcargue = ${idcargue}
+  `;
+}
+
+export async function getProductoHomologacionByProductoTipo(idproducto: string, idtipocargue: string) {
+  const db = ensureConnection();
+  return await db<ProductoHomologacion[]>`
+    SELECT ph.idproducto, ph.idhomologacion, ph.idtipocargue, ph.idtabla,
+           ph.nombrecolumna as "nombreColumna",
+           ph.tipodato as "tipoDato",
+           ph.obligatorio, ph.filtro,
+           ph.nombrecampoorigen as "nombreCampoOrigen",
+           ph.nombrealiasorigen as "nombreAliasOrigen",
+           ph.fecha_creacion, ph.idusuariocrea,
+           ph.fechamodificacion, ph.idusuariomod, ph.estado,
+           p.nombre as "productoNombre",
+           ct.nombre as "tipoCargueNombre",
+           t.nombre as "tablaNombre",
+           dt.nombre as "tipoDatoNombre"
+    FROM producto_homologacion ph
+    JOIN productos p ON ph.idproducto = p.idproducto
+    JOIN cargue_tipo ct ON ph.idtipocargue = ct.idtipocargue
+    JOIN tabla t ON ph.idtabla = t.idtabla
+    JOIN dato_tipo dt ON ph.tipodato = dt.idtipodato
+    WHERE ph.idproducto = ${idproducto} AND ph.idtipocargue = ${idtipocargue} AND ph.estado = 'activo'
+    ORDER BY t.nombre, ph.nombrecolumna
+  `;
+}
+
+export async function getBasesByProducto(idproducto: string) {
+  const db = ensureConnection();
+  return await db<Base[]>`
+    SELECT b.*, p.nombre as productonombre
+    FROM bases b
+    LEFT JOIN productos p ON b.idproducto = p.idproducto
+    WHERE b.idproducto = ${idproducto} AND b.estado = 'activo'
+    ORDER BY b.fechacreacion DESC
+  `;
 }

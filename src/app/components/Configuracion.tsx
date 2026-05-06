@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Empresa } from './configuracion/Empresa';
 import { Producto } from './configuracion/Producto';
 import { Base } from './configuracion/Base';
-import { Cargue } from './configuracion/Cargue';
+import { CargueModule } from './configuracion/Cargue';
 import { Plantilla } from './configuracion/Plantilla';
 import { Tipificacion } from './configuracion/Tipificacion';
 import { Building2, Package, Database, Upload, FileText, Tags } from 'lucide-react';
@@ -45,7 +45,7 @@ export function Configuracion() {
         </TabsContent>
 
         <TabsContent value="cargue" className="space-y-6">
-          {activeTab === 'cargue' && <Cargue />}
+          {activeTab === 'cargue' && <CargueModule />}
         </TabsContent>
 
         <TabsContent value="plantilla" className="space-y-6">

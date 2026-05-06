@@ -6,6 +6,7 @@ import {
   Producto,
   Base,
   CargueTipo,
+  Cargue,
   TablaDef,
   DatoTipo,
   TablaColumna,
@@ -41,6 +42,16 @@ import {
   createProductoHomologacionBatch,
   updateProductoHomologacion,
   deleteProductoHomologacion,
+  getCarguesByProducto,
+  createCargue,
+  inactivateCarguesByTipoCargue,
+  updateBaseCargueGestionar,
+  getCarguesActivosObligacion,
+  batchInsertPersonas,
+  batchInsertObligaciones,
+  getPersonasIdByCargue,
+  getProductoHomologacionByProductoTipo,
+  getBasesByProducto,
 } from '../lib/db';
 
 interface DatabaseContextType {
@@ -75,6 +86,16 @@ interface DatabaseContextType {
   createProductoHomologacionBatch: (records: ProductoHomologacionInput[]) => Promise<ProductoHomologacion[]>;
   updateProductoHomologacion: (idproducto: string, idhomologacion: string, data: Partial<Pick<ProductoHomologacion, 'obligatorio' | 'filtro' | 'nombreCampoOrigen' | 'nombreAliasOrigen' | 'estado'>>, idusuariomod: string) => Promise<ProductoHomologacion>;
   deleteProductoHomologacion: (idproducto: string, idhomologacion: string, idusuariomod: string) => Promise<void>;
+  getCarguesByProducto: (idproducto: string) => Promise<Cargue[]>;
+  createCargue: (data: { idtipocargue: string; idbase: string; nombrearchivo: string; cantidadregistros: number; idusuario: string; idusuariomod: string; estado: string }) => Promise<{ idcargue: number }>;
+  inactivateCarguesByTipoCargue: (idbase: string, idtipocargue: string, excludeIdcargue: number, idusuariomod: string) => Promise<void>;
+  updateBaseCargueGestionar: (idbase: string, idcarguegestionar: number | null, idusuariomod: string) => Promise<void>;
+  getCarguesActivosObligacion: (idbase: string) => Promise<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>;
+  batchInsertPersonas: (rows: Record<string, any>[], batchSize?: number, onProgress?: (done: number, total: number) => void) => Promise<void>;
+  batchInsertObligaciones: (rows: Record<string, any>[], batchSize?: number, onProgress?: (done: number, total: number) => void) => Promise<void>;
+  getPersonasIdByCargue: (idcargue: number) => Promise<{ idpersona: string; identificacion: string }[]>;
+  getProductoHomologacionByProductoTipo: (idproducto: string, idtipocargue: string) => Promise<ProductoHomologacion[]>;
+  getBasesByProducto: (idproducto: string) => Promise<Base[]>;
 }
 
 const DatabaseContext = createContext<DatabaseContextType | null>(null);
@@ -89,6 +110,11 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     getCargueTipos, getTablas, getDatoTipos, getTablaColumnaByTipoCargue,
     getProductoHomologaciones, createProductoHomologacionBatch,
     updateProductoHomologacion, deleteProductoHomologacion,
+    getCarguesByProducto, createCargue, inactivateCarguesByTipoCargue,
+    updateBaseCargueGestionar, getCarguesActivosObligacion,
+    batchInsertPersonas, batchInsertObligaciones,
+    getPersonasIdByCargue, getProductoHomologacionByProductoTipo,
+    getBasesByProducto,
   };
 
   return (

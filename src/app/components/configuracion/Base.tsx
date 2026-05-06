@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Database, Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Database, Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDatabase } from '../../context/DatabaseContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,6 +35,7 @@ export function Base() {
   };
   const [bases, setBases] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
+  const [carguesObligacion, setCarguesObligacion] = useState<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('activo');
@@ -90,12 +91,19 @@ export function Base() {
     }
   };
 
-  const handleEdit = (base: any) => {
+  const handleEdit = async (base: any) => {
     setEditingId(base.idbase);
     setFormData({
       nombre: base.nombre || '', alias: base.alias || '', idproducto: base.idproducto || '',
       idcarguegestionar: base.idcarguegestionar || '', maximocuotas: base.maximocuotas || 1, estado: base.estado || 'activo',
     });
+    // Load active obligacion cargues for this base
+    try {
+      const cargues = await db.getCarguesActivosObligacion(base.idbase);
+      setCarguesObligacion(cargues);
+    } catch {
+      setCarguesObligacion([]);
+    }
     setIsDialogOpen(true);
   };
 
@@ -213,6 +221,25 @@ export function Base() {
                       <Label className="text-xs font-medium text-slate-600">Máximo de Cuotas *</Label>
                       <Input type="number" min="1" value={formData.maximocuotas} onChange={(e) => setFormData({...formData, maximocuotas: parseInt(e.target.value)})} className="h-7 text-xs border-slate-200 focus:border-sky-300 w-[10ch]" required />
                     </div>
+                    {editingId && (
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-xs font-medium text-slate-600">Cargue a Gestionar (Obligación)</Label>
+                        <Select value={formData.idcarguegestionar ? String(formData.idcarguegestionar) : ''} onValueChange={(v) => setFormData({...formData, idcarguegestionar: v === '' ? '' : v})}>
+                          <SelectTrigger className="!h-7 !py-0.5 text-xs border-sky-500 focus:border-sky-600 w-[45ch]">
+                            <SelectValue placeholder="Seleccione cargue de obligación activo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {carguesObligacion.length === 0 ? (
+                              <div className="p-2 text-xs text-slate-400">No hay cargues de obligación activos</div>
+                            ) : carguesObligacion.map((c) => (
+                              <SelectItem key={c.idcargue} value={String(c.idcargue)}>
+                                #{c.idcargue} - {c.nombrearchivo} ({c.cantidadregistros.toLocaleString()} reg.)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <Label className="text-xs font-medium text-slate-600">Estado *</Label>
                       <Select value={formData.estado} onValueChange={(v) => setFormData({...formData, estado: v})}>
