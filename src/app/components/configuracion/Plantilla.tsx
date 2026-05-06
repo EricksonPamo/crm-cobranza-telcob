@@ -81,11 +81,10 @@ const CampoRow = memo(({
         {campo.nombreColumna}
       </td>
       <td className="h-7 text-xs bg-gray-50 text-gray-600 px-2 py-2 border-r border-gray-300">
-        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-          campo.tipoDatoNombre === 'varchar' ? 'bg-blue-100 text-blue-700' :
-          campo.tipoDatoNombre === 'numerico' ? 'bg-green-100 text-green-700' :
-          'bg-purple-100 text-purple-700'
-        }`}>
+        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${campo.tipoDatoNombre === 'varchar' ? 'bg-blue-100 text-blue-700' :
+            campo.tipoDatoNombre === 'numerico' ? 'bg-green-100 text-green-700' :
+              'bg-purple-100 text-purple-700'
+          }`}>
           {campo.tipoDatoNombre}
         </span>
       </td>
@@ -149,6 +148,7 @@ export function Plantilla() {
   const [filterProducto, setFilterProducto] = useState('');
   const [filterTipoCargue, setFilterTipoCargue] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('activo');
+  const [busquedaRealizada, setBusquedaRealizada] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
   const registrosPorPagina = 20;
 
@@ -374,7 +374,7 @@ export function Plantilla() {
             <div className="mb-2 flex flex-wrap gap-2 items-center">
               <div className="flex items-center gap-1">
                 <Label className="text-xs text-gray-500 whitespace-nowrap">Producto:</Label>
-                <Select value={filterProducto} onValueChange={setFilterProducto}>
+                <Select value={filterProducto} onValueChange={(v) => { setFilterProducto(v); setBusquedaRealizada(false); }}>
                   <SelectTrigger className="!h-7 !py-1 text-xs w-44 border-sky-500">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
@@ -387,7 +387,7 @@ export function Plantilla() {
               </div>
               <div className="flex items-center gap-1">
                 <Label className="text-xs text-gray-500 whitespace-nowrap">Tipo Cargue:</Label>
-                <Select value={filterTipoCargue} onValueChange={setFilterTipoCargue}>
+                <Select value={filterTipoCargue} onValueChange={(v) => { setFilterTipoCargue(v); setBusquedaRealizada(false); }}>
                   <SelectTrigger className="!h-7 !py-1 text-xs w-36 border-sky-500">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
@@ -400,7 +400,7 @@ export function Plantilla() {
               </div>
               <div className="flex items-center gap-1">
                 <Label className="text-xs text-gray-500 whitespace-nowrap">Estado:</Label>
-                <Select value={filterEstado} onValueChange={setFilterEstado}>
+                <Select value={filterEstado} onValueChange={(v) => { setFilterEstado(v); setBusquedaRealizada(false); }}>
                   <SelectTrigger className="!h-7 !py-1 text-xs w-28 border-sky-500">
                     <SelectValue />
                   </SelectTrigger>
@@ -411,7 +411,7 @@ export function Plantilla() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button size="sm" onClick={() => { setPaginaActual(1); }} className="h-7 text-xs px-3">
+              <Button size="sm" onClick={() => { setBusquedaRealizada(true); setPaginaActual(1); }} className="h-7 text-xs px-3">
                 <Search className="w-3 h-3 mr-1" />
                 Buscar
               </Button>
@@ -424,107 +424,114 @@ export function Plantilla() {
             </div>
 
             {/* Tabla principal */}
-            <div className="border rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-200">
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Producto</TableHead>
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Tipo Cargue</TableHead>
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Tabla</TableHead>
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Nombre Columna</TableHead>
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Tipo Dato</TableHead>
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Obligatorio</TableHead>
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Filtro</TableHead>
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Campo Origen</TableHead>
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Alias</TableHead>
-                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Estado</TableHead>
-                      <TableHead className="font-semibold text-right py-0.5 text-xs">Acción</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {homologacionesPagina.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={11} className="text-center py-8 text-gray-500">
-                          No se encontraron registros
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      homologacionesPagina.map((h, idx) => (
-                        <TableRow key={`${h.idproducto}-${h.idhomologacion}`} className="border-b border-gray-300">
-                          <TableCell className="border-r border-gray-300 text-xs">{h.productoNombre}</TableCell>
-                          <TableCell className="border-r border-gray-300 text-xs">{h.tipoCargueNombre}</TableCell>
-                          <TableCell className="border-r border-gray-300 text-xs">{h.tablaNombre}</TableCell>
-                          <TableCell className="border-r border-gray-300 text-xs">{h.nombreColumna}</TableCell>
-                          <TableCell className="border-r border-gray-300 text-xs">
-                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              h.tipoDatoNombre === 'varchar' ? 'bg-blue-100 text-blue-700' :
-                              h.tipoDatoNombre === 'numerico' ? 'bg-green-100 text-green-700' :
-                              'bg-purple-100 text-purple-700'
-                            }`}>
-                              {h.tipoDatoNombre}
-                            </span>
-                          </TableCell>
-                          <TableCell className="border-r border-gray-300 text-xs text-center">
-                            {h.obligatorio ? (
-                              <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">SI</span>
-                            ) : (
-                              <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">NO</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="border-r border-gray-300 text-xs text-center">
-                            {h.filtro ? <span className="text-green-600 font-medium">✓</span> : <span className="text-gray-400">-</span>}
-                          </TableCell>
-                          <TableCell className="border-r border-gray-300 text-xs max-w-[120px] truncate">{h.nombreCampoOrigen || '-'}</TableCell>
-                          <TableCell className="border-r border-gray-300 text-xs max-w-[120px] truncate">{h.nombreAliasOrigen || '-'}</TableCell>
-                          <TableCell className="border-r border-gray-300 text-xs">
-                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              h.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {h.estado === 'activo' ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => handleEdit(h)} title="Editar">
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleToggleEstado(h)} title={h.estado === 'activo' ? 'Desactivar' : 'Activar'}>
-                                {h.estado === 'activo' ? <Power className="w-4 h-4 text-green-600" /> : <PowerOff className="w-4 h-4 text-red-600" />}
-                              </Button>
-                            </div>
-                          </TableCell>
+            {!busquedaRealizada ? (
+              <div className="text-center py-12 text-gray-400">
+                <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">Seleccione los filtros y haga clic en <strong>Buscar</strong></p>
+              </div>
+            ) : (
+              <>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-200">
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Producto</TableHead>
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Tipo Cargue</TableHead>
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Tabla</TableHead>
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Nombre Columna</TableHead>
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Tipo Dato</TableHead>
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Obligatorio</TableHead>
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Filtro</TableHead>
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Campo Origen</TableHead>
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Alias</TableHead>
+                          <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Estado</TableHead>
+                          <TableHead className="font-semibold text-right py-0.5 text-xs">Acción</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-
-            {/* Paginación */}
-            {totalPaginas > 1 && (
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-500">
-                  {filteredHomologaciones.length} registro(s) - Página {paginaActual} de {totalPaginas}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline" size="icon" className="h-6 w-6"
-                    disabled={paginaActual === 1}
-                    onClick={() => setPaginaActual(p => p - 1)}
-                  >
-                    <ChevronLeft className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    variant="outline" size="icon" className="h-6 w-6"
-                    disabled={paginaActual === totalPaginas}
-                    onClick={() => setPaginaActual(p => p + 1)}
-                  >
-                    <ChevronRight className="w-3 h-3" />
-                  </Button>
+                      </TableHeader>
+                      <TableBody>
+                        {homologacionesPagina.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+                              No se encontraron registros
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          homologacionesPagina.map((h, idx) => (
+                            <TableRow key={`${h.idproducto}-${h.idhomologacion}`} className="border-b border-gray-300">
+                              <TableCell className="border-r border-gray-300 text-xs">{h.productoNombre}</TableCell>
+                              <TableCell className="border-r border-gray-300 text-xs">{h.tipoCargueNombre}</TableCell>
+                              <TableCell className="border-r border-gray-300 text-xs">{h.tablaNombre}</TableCell>
+                              <TableCell className="border-r border-gray-300 text-xs">{h.nombreColumna}</TableCell>
+                              <TableCell className="border-r border-gray-300 text-xs">
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${h.tipoDatoNombre === 'varchar' ? 'bg-blue-100 text-blue-700' :
+                                    h.tipoDatoNombre === 'numerico' ? 'bg-green-100 text-green-700' :
+                                      'bg-purple-100 text-purple-700'
+                                  }`}>
+                                  {h.tipoDatoNombre}
+                                </span>
+                              </TableCell>
+                              <TableCell className="border-r border-gray-300 text-xs text-center">
+                                {h.obligatorio ? (
+                                  <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">SI</span>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">NO</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="border-r border-gray-300 text-xs text-center">
+                                {h.filtro ? <span className="text-green-600 font-medium">✓</span> : <span className="text-gray-400">-</span>}
+                              </TableCell>
+                              <TableCell className="border-r border-gray-300 text-xs max-w-[120px] truncate">{h.nombreCampoOrigen || '-'}</TableCell>
+                              <TableCell className="border-r border-gray-300 text-xs max-w-[120px] truncate">{h.nombreAliasOrigen || '-'}</TableCell>
+                              <TableCell className="border-r border-gray-300 text-xs">
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${h.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                  {h.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(h)} title="Editar">
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleToggleEstado(h)} title={h.estado === 'activo' ? 'Desactivar' : 'Activar'}>
+                                    {h.estado === 'activo' ? <Power className="w-4 h-4 text-green-600" /> : <PowerOff className="w-4 h-4 text-red-600" />}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
-              </div>
+
+                {/* Paginación */}
+                {totalPaginas > 1 && (
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-gray-500">
+                      {filteredHomologaciones.length} registro(s) - Página {paginaActual} de {totalPaginas}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline" size="icon" className="h-6 w-6"
+                        disabled={paginaActual === 1}
+                        onClick={() => setPaginaActual(p => p - 1)}
+                      >
+                        <ChevronLeft className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="outline" size="icon" className="h-6 w-6"
+                        disabled={paginaActual === totalPaginas}
+                        onClick={() => setPaginaActual(p => p + 1)}
+                      >
+                        <ChevronRight className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
