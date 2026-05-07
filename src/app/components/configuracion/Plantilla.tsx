@@ -82,8 +82,8 @@ const CampoRow = memo(({
       </td>
       <td className="h-7 text-xs bg-gray-50 text-gray-600 px-2 py-2 border-r border-gray-300">
         <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${campo.tipoDatoNombre === 'varchar' ? 'bg-blue-100 text-blue-700' :
-            campo.tipoDatoNombre === 'numerico' ? 'bg-green-100 text-green-700' :
-              'bg-purple-100 text-purple-700'
+          campo.tipoDatoNombre === 'numerico' ? 'bg-green-100 text-green-700' :
+            'bg-purple-100 text-purple-700'
           }`}>
           {campo.tipoDatoNombre}
         </span>
@@ -465,8 +465,8 @@ export function Plantilla() {
                               <TableCell className="border-r border-gray-300 text-xs">{h.nombreColumna}</TableCell>
                               <TableCell className="border-r border-gray-300 text-xs">
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${h.tipoDatoNombre === 'varchar' ? 'bg-blue-100 text-blue-700' :
-                                    h.tipoDatoNombre === 'numerico' ? 'bg-green-100 text-green-700' :
-                                      'bg-purple-100 text-purple-700'
+                                  h.tipoDatoNombre === 'numerico' ? 'bg-green-100 text-green-700' :
+                                    'bg-purple-100 text-purple-700'
                                   }`}>
                                   {h.tipoDatoNombre}
                                 </span>

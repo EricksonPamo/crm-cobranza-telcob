@@ -101,8 +101,22 @@ export function CargueModule() {
   };
 
   // ===================== CSV PARSING =====================
+  const detectDelimiter = (text: string): string => {
+    const firstLine = text.split(/\r?\n/)[0] || '';
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    return semicolonCount > commaCount ? ';' : ',';
+  };
+
+  const stripBOM = (text: string): string => {
+    if (text.charCodeAt(0) === 0xFEFF) return text.slice(1);
+    return text;
+  };
+
   const parseCSV = (text: string): string[][] => {
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    const cleanText = stripBOM(text);
+    const delimiter = detectDelimiter(cleanText);
+    const lines = cleanText.split(/\r?\n/).filter(l => l.trim());
     return lines.map(line => {
       const row: string[] = [];
       let current = '';
@@ -116,7 +130,7 @@ export function CargueModule() {
           } else {
             inQuotes = !inQuotes;
           }
-        } else if (ch === ',' && !inQuotes) {
+        } else if (ch === delimiter && !inQuotes) {
           row.push(current.trim());
           current = '';
         } else {
@@ -138,24 +152,41 @@ export function CargueModule() {
     const headers = csvRows[0];
     const dataRows = csvRows.slice(1);
 
-    // Build header index map (lowercase for matching)
+    // Build header index map (lowercase, no accents for matching)
+    const normalize = (s: string) =>
+      s.toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '');
     const headerMap = new Map<string, number>();
-    headers.forEach((h, i) => headerMap.set(h.toLowerCase().trim(), i));
+    headers.forEach((h, i) => headerMap.set(normalize(h), i));
 
-    // Group homologacion by table
-    const personaFields = homologacion.filter(h => h.tablaNombre.toLowerCase() === 'personas');
-    const obligacionFields = homologacion.filter(h => h.tablaNombre.toLowerCase() === 'obligaciones');
+    // Group homologacion by table (match both singular and plural forms)
+    const personaFields = homologacion.filter(h => {
+      const t = h.tablaNombre.toLowerCase();
+      return t === 'personas' || t === 'persona';
+    });
+    const obligacionFields = homologacion.filter(h => {
+      const t = h.tablaNombre.toLowerCase();
+      return t === 'obligaciones' || t === 'obligacion';
+    });
 
-    // Map: nombrecampoorigen -> header index
+    // Map: nombrecampoorigen -> header index (normalized)
     const mapField = (field: ProductoHomologacion): number | null => {
       if (!field.nombreCampoOrigen) return null;
-      const idx = headerMap.get(field.nombreCampoOrigen.toLowerCase().trim());
+      const idx = headerMap.get(normalize(field.nombreCampoOrigen));
       return idx !== undefined ? idx : null;
     };
+
+    // Log unmatched fields for diagnostics
+    const unmatchedFields = homologacion
+      .filter(f => f.nombreCampoOrigen && mapField(f) === null)
+      .map(f => `"${f.nombreCampoOrigen}" (${f.tablaNombre}.${f.nombreColumna})`);
+    if (unmatchedFields.length > 0) {
+      console.warn('Campos de plantilla no encontrados en CSV:', unmatchedFields);
+    }
 
     // Deduplicate persons by identificacion
     const personaMap = new Map<string, Record<string, any>>();
     const obligacionRecords: Record<string, any>[] = [];
+    let skippedRows = 0;
 
     for (const row of dataRows) {
       if (row.length === 0 || row.every(c => !c)) continue;
@@ -172,7 +203,7 @@ export function CargueModule() {
         if (colName === 'identificacion') identificacion = value;
       }
 
-      if (!identificacion) continue;
+      if (!identificacion) { skippedRows++; continue; }
 
       // Deduplicate person
       if (!personaMap.has(identificacion)) {
@@ -191,6 +222,10 @@ export function CargueModule() {
       }
 
       obligacionRecords.push(obligacionRecord);
+    }
+
+    if (skippedRows > 0) {
+      console.warn(`${skippedRows} filas sin identificación fueron omitidas`);
     }
 
     return {
@@ -232,7 +267,32 @@ export function CargueModule() {
       const { personaRows, obligacionRows, uniquePersonCount } = mapCsvToRecords(csvRows, homologacion);
 
       if (personaRows.length === 0) {
-        toast.error('No se encontraron registros válidos en el archivo');
+        // Build diagnostic info
+        const csvHeaders = csvRows[0];
+        const expectedFields = homologacion
+          .filter(h => { const t = h.tablaNombre.toLowerCase(); return t === 'personas' || t === 'persona'; })
+          .map(h => h.nombreCampoOrigen)
+          .filter(Boolean);
+        const normalize = (s: string) =>
+          s.toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const csvHeadersNorm = csvHeaders.map(normalize);
+        const matchedHeaders = expectedFields.filter((f: string) => csvHeadersNorm.includes(normalize(f)));
+        const unmatchedHeaders = expectedFields.filter((f: string) => !csvHeadersNorm.includes(normalize(f)));
+
+        let errorMsg = 'No se encontraron registros válidos en el archivo.';
+        if (expectedFields.length === 0) {
+          errorMsg += '\nNo hay campos de persona configurados en la plantilla.';
+        } else if (matchedHeaders.length === 0) {
+          errorMsg += `\nEncabezados del CSV: ${csvHeaders.join(', ')}`;
+          errorMsg += `\nCampos esperados: ${expectedFields.join(', ')}`;
+          errorMsg += '\nVerifique que los encabezados del CSV coincidan con los campos origen de la plantilla.';
+        } else {
+          errorMsg += `\nSe encontraron ${matchedHeaders.length} de ${expectedFields.length} campos, pero ningún registro tiene identificación.`;
+          if (unmatchedHeaders.length > 0) {
+            errorMsg += `\nCampos no encontrados en CSV: ${unmatchedHeaders.join(', ')}`;
+          }
+        }
+        toast.error(errorMsg, { duration: 8000 });
         setUploading(false);
         setProgress({ phase: '', done: 0, total: 0 });
         return;
@@ -251,8 +311,8 @@ export function CargueModule() {
       });
       const idcargue = cargueRecord.idcargue;
 
-      // 5. Insert personas in batches
-      setProgress({ phase: `Insertando ${uniquePersonCount} personas...`, done: 0, total: 1 });
+      // 5. Insert personas (single query with RETURNING to get IDs)
+      setProgress({ phase: `Insertando ${uniquePersonCount} personas...`, done: 3, total: 5 });
       const personaRowsWithCargue = personaRows.map(p => ({
         ...p,
         idcargue,
@@ -260,17 +320,11 @@ export function CargueModule() {
         estado: 'activo',
       }));
 
-      await db.batchInsertPersonas(personaRowsWithCargue, 500, (done, total) => {
-        setProgress(prev => ({ ...prev, done, total }));
-      });
+      const insertedPersonas = await db.batchInsertPersonas(personaRowsWithCargue);
+      const idMap = new Map(insertedPersonas.map(p => [p.identificacion, p.idpersona]));
 
-      // 6. Get persona id mapping
-      setProgress({ phase: 'Obteniendo IDs de personas...', done: 0, total: 1 });
-      const personaIds = await db.getPersonasIdByCargue(idcargue);
-      const idMap = new Map(personaIds.map(p => [p.identificacion, p.idpersona]));
-
-      // 7. Insert obligaciones in batches
-      setProgress({ phase: `Insertando ${obligacionRows.length} obligaciones...`, done: 0, total: 1 });
+      // 6. Insert obligaciones (single query)
+      setProgress({ phase: `Insertando ${obligacionRows.length} obligaciones...`, done: 4, total: 5 });
       const obligacionRowsWithIds = obligacionRows.map(o => {
         const { _identificacion, ...fields } = o;
         return {
@@ -282,9 +336,7 @@ export function CargueModule() {
         };
       }).filter(o => o.idpersona !== null);
 
-      await db.batchInsertObligaciones(obligacionRowsWithIds, 500, (done, total) => {
-        setProgress(prev => ({ ...prev, done, total }));
-      });
+      await db.batchInsertObligaciones(obligacionRowsWithIds);
 
       // 8. Inactivate previous cargues of same tipo
       setProgress({ phase: 'Actualizando estado de cargues...', done: 4, total: 5 });

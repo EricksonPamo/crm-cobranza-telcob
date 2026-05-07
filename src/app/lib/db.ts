@@ -612,48 +612,46 @@ const OBLIGACIONES_COLUMNS = [
   'idusuario', 'estado',
 ];
 
-function buildMultiRowInsert(tableName: string, columns: string[], batch: Record<string, any>[][]): { query: string; params: any[] } {
+function buildMultiRowInsert(tableName: string, columns: string[], batch: Record<string, any>[]): { query: string; params: any[] } {
   const params: any[] = [];
   const valueRows: string[] = [];
-
   for (const row of batch) {
     const rowPlaceholders: string[] = [];
     for (const col of columns) {
       const paramIdx = params.length + 1;
       const val = row[col];
-      if (val === undefined || val === null || val === '') {
-        params.push(null);
-      } else {
-        params.push(val);
-      }
+      params.push((val === undefined || val === null || val === '') ? null : val);
       rowPlaceholders.push(`$${paramIdx}`);
     }
     valueRows.push(`(${rowPlaceholders.join(',')})`);
   }
-
-  const query = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES ${valueRows.join(',')}`;
-  return { query, params };
+  return { query: `INSERT INTO ${tableName} (${columns.join(',')}) VALUES ${valueRows.join(',')}`, params };
 }
 
-export async function batchInsertPersonas(rows: Record<string, any>[], batchSize = 500, onProgress?: (done: number, total: number) => void) {
+export async function batchInsertPersonas(rows: Record<string, any>[], batchSize = 500): Promise<{ idpersona: string; identificacion: string }[]> {
   const db = ensureConnection();
-  const total = rows.length;
-  for (let i = 0; i < total; i += batchSize) {
+  if (rows.length === 0) return [];
+
+  const allResults: { idpersona: string; identificacion: string }[] = [];
+  for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
     const { query, params } = buildMultiRowInsert('personas', PERSONAS_COLUMNS, batch);
-    await db.unsafe(query, params);
-    if (onProgress) onProgress(Math.min(i + batchSize, total), total);
+    const results = await db.query<{ idpersona: string; identificacion: string }[]>(
+      query + ' RETURNING idpersona, identificacion', params
+    );
+    allResults.push(...results);
   }
+  return allResults;
 }
 
-export async function batchInsertObligaciones(rows: Record<string, any>[], batchSize = 500, onProgress?: (done: number, total: number) => void) {
+export async function batchInsertObligaciones(rows: Record<string, any>[], batchSize = 500): Promise<void> {
   const db = ensureConnection();
-  const total = rows.length;
-  for (let i = 0; i < total; i += batchSize) {
+  if (rows.length === 0) return;
+
+  for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
     const { query, params } = buildMultiRowInsert('obligaciones', OBLIGACIONES_COLUMNS, batch);
-    await db.unsafe(query, params);
-    if (onProgress) onProgress(Math.min(i + batchSize, total), total);
+    await db.query(query, params);
   }
 }
 
