@@ -35,7 +35,7 @@ export function Base() {
   };
   const [bases, setBases] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
-  const [carguesObligacion, setCarguesObligacion] = useState<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>([]);
+  const [carguesPersona, setCarguesPersona] = useState<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('activo');
@@ -97,12 +97,12 @@ export function Base() {
       nombre: base.nombre || '', alias: base.alias || '', idproducto: base.idproducto || '',
       idcarguegestionar: base.idcarguegestionar || '', maximocuotas: base.maximocuotas || 1, estado: base.estado || 'activo',
     });
-    // Load active obligacion cargues for this base
+    // Load active persona cargues for this base
     try {
-      const cargues = await db.getCarguesActivosObligacion(base.idbase);
-      setCarguesObligacion(cargues);
+      const cargues = await db.getCarguesActivosPersona(base.idbase);
+      setCarguesPersona(cargues);
     } catch {
-      setCarguesObligacion([]);
+      setCarguesPersona([]);
     }
     setIsDialogOpen(true);
   };
@@ -229,9 +229,9 @@ export function Base() {
                             <SelectValue placeholder="Seleccione cargue de obligación activo" />
                           </SelectTrigger>
                           <SelectContent>
-                            {carguesObligacion.length === 0 ? (
+                            {carguesPersona.length === 0 ? (
                               <div className="p-2 text-xs text-slate-400">No hay cargues de obligación activos</div>
-                            ) : carguesObligacion.map((c) => (
+                            ) : carguesPersona.map((c) => (
                               <SelectItem key={c.idcargue} value={String(c.idcargue)}>
                                 #{c.idcargue} - {c.nombrearchivo} ({c.cantidadregistros.toLocaleString()} reg.)
                               </SelectItem>

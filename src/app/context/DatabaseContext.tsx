@@ -46,9 +46,8 @@ import {
   createCargue,
   inactivateCarguesByTipoCargue,
   updateBaseCargueGestionar,
-  getCarguesActivosObligacion,
+  getCarguesActivosPersona,
   batchInsertPersonas,
-  batchInsertObligaciones,
   getPersonasIdByCargue,
   getProductoHomologacionByProductoTipo,
   getBasesByProducto,
@@ -90,9 +89,8 @@ interface DatabaseContextType {
   createCargue: (data: { idtipocargue: string; idbase: string; nombrearchivo: string; cantidadregistros: number; idusuario: string; idusuariomod: string; estado: string }) => Promise<{ idcargue: number }>;
   inactivateCarguesByTipoCargue: (idbase: string, idtipocargue: string, excludeIdcargue: number, idusuariomod: string) => Promise<void>;
   updateBaseCargueGestionar: (idbase: string, idcarguegestionar: number | null, idusuariomod: string) => Promise<void>;
-  getCarguesActivosObligacion: (idbase: string) => Promise<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>;
+  getCarguesActivosPersona: (idbase: string) => Promise<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>;
   batchInsertPersonas: (rows: Record<string, any>[], batchSize?: number) => Promise<{ idpersona: string; identificacion: string }[]>;
-  batchInsertObligaciones: (rows: Record<string, any>[], batchSize?: number) => Promise<void>;
   getPersonasIdByCargue: (idcargue: number) => Promise<{ idpersona: string; identificacion: string }[]>;
   getProductoHomologacionByProductoTipo: (idproducto: string, idtipocargue: string) => Promise<ProductoHomologacion[]>;
   getBasesByProducto: (idproducto: string) => Promise<Base[]>;
@@ -111,8 +109,8 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     getProductoHomologaciones, createProductoHomologacionBatch,
     updateProductoHomologacion, deleteProductoHomologacion,
     getCarguesByProducto, createCargue, inactivateCarguesByTipoCargue,
-    updateBaseCargueGestionar, getCarguesActivosObligacion,
-    batchInsertPersonas, batchInsertObligaciones,
+    updateBaseCargueGestionar, getCarguesActivosPersona,
+    batchInsertPersonas,
     getPersonasIdByCargue, getProductoHomologacionByProductoTipo,
     getBasesByProducto,
   };

@@ -146,7 +146,7 @@ export function CargueModule() {
   const mapCsvToRecords = (
     csvRows: string[][],
     homologacion: ProductoHomologacion[],
-  ): { personaRows: Record<string, any>[]; obligacionRows: Record<string, any>[]; uniquePersonCount: number } => {
+  ): { personaRows: Record<string, any>[]; totalRows: number } => {
     if (csvRows.length < 2) throw new Error('El archivo CSV no tiene datos');
 
     const headers = csvRows[0];
@@ -158,15 +158,8 @@ export function CargueModule() {
     const headerMap = new Map<string, number>();
     headers.forEach((h, i) => headerMap.set(normalize(h), i));
 
-    // Group homologacion by table (match both singular and plural forms)
-    const personaFields = homologacion.filter(h => {
-      const t = h.tablaNombre.toLowerCase();
-      return t === 'personas' || t === 'persona';
-    });
-    const obligacionFields = homologacion.filter(h => {
-      const t = h.tablaNombre.toLowerCase();
-      return t === 'obligaciones' || t === 'obligacion';
-    });
+    // All homologacion fields map to personas (tabla unificada)
+    const personaFields = homologacion;
 
     // Map: nombrecampoorigen -> header index (normalized)
     const mapField = (field: ProductoHomologacion): number | null => {
@@ -183,15 +176,13 @@ export function CargueModule() {
       console.warn('Campos de plantilla no encontrados en CSV:', unmatchedFields);
     }
 
-    // Deduplicate persons by identificacion
-    const personaMap = new Map<string, Record<string, any>>();
-    const obligacionRecords: Record<string, any>[] = [];
+    // Each CSV row becomes a persona record (no deduplication since obligaciones are now in persona)
+    const personaRecords: Record<string, any>[] = [];
     let skippedRows = 0;
 
     for (const row of dataRows) {
       if (row.length === 0 || row.every(c => !c)) continue;
 
-      // Build persona record
       const personaRecord: Record<string, any> = {};
       let identificacion = '';
 
@@ -205,23 +196,7 @@ export function CargueModule() {
 
       if (!identificacion) { skippedRows++; continue; }
 
-      // Deduplicate person
-      if (!personaMap.has(identificacion)) {
-        personaMap.set(identificacion, personaRecord);
-      }
-
-      // Build obligacion record
-      const obligacionRecord: Record<string, any> = {};
-      obligacionRecord._identificacion = identificacion;
-
-      for (const field of obligacionFields) {
-        const csvIdx = mapField(field);
-        const value = csvIdx !== null && csvIdx < row.length ? row[csvIdx] : '';
-        const colName = field.nombreColumna.toLowerCase();
-        obligacionRecord[colName] = value || null;
-      }
-
-      obligacionRecords.push(obligacionRecord);
+      personaRecords.push(personaRecord);
     }
 
     if (skippedRows > 0) {
@@ -229,9 +204,8 @@ export function CargueModule() {
     }
 
     return {
-      personaRows: Array.from(personaMap.values()),
-      obligacionRows: obligacionRecords,
-      uniquePersonCount: personaMap.size,
+      personaRows: personaRecords,
+      totalRows: personaRecords.length,
     };
   };
 
@@ -263,14 +237,13 @@ export function CargueModule() {
       const csvRows = parseCSV(text);
 
       // 3. Map CSV to records using plantilla
-      setProgress({ phase: 'Mapeando datos...', done: 2, total: 5 });
-      const { personaRows, obligacionRows, uniquePersonCount } = mapCsvToRecords(csvRows, homologacion);
+      setProgress({ phase: 'Mapeando datos...', done: 2, total: 4 });
+      const { personaRows, totalRows } = mapCsvToRecords(csvRows, homologacion);
 
       if (personaRows.length === 0) {
         // Build diagnostic info
         const csvHeaders = csvRows[0];
         const expectedFields = homologacion
-          .filter(h => { const t = h.tablaNombre.toLowerCase(); return t === 'personas' || t === 'persona'; })
           .map(h => h.nombreCampoOrigen)
           .filter(Boolean);
         const normalize = (s: string) =>
@@ -281,7 +254,7 @@ export function CargueModule() {
 
         let errorMsg = 'No se encontraron registros válidos en el archivo.';
         if (expectedFields.length === 0) {
-          errorMsg += '\nNo hay campos de persona configurados en la plantilla.';
+          errorMsg += '\nNo hay campos configurados en la plantilla.';
         } else if (matchedHeaders.length === 0) {
           errorMsg += `\nEncabezados del CSV: ${csvHeaders.join(', ')}`;
           errorMsg += `\nCampos esperados: ${expectedFields.join(', ')}`;
@@ -299,20 +272,20 @@ export function CargueModule() {
       }
 
       // 4. Create cargue record
-      setProgress({ phase: 'Creando registro de cargue...', done: 3, total: 5 });
+      setProgress({ phase: 'Creando registro de cargue...', done: 3, total: 4 });
       const cargueRecord = await db.createCargue({
         idtipocargue: selectedTipoCargue,
         idbase: selectedBase,
         nombrearchivo: file.name,
-        cantidadregistros: obligacionRows.length,
+        cantidadregistros: totalRows,
         idusuario: userId,
         idusuariomod: userId,
         estado: 'activo',
       });
       const idcargue = cargueRecord.idcargue;
 
-      // 5. Insert personas (single query with RETURNING to get IDs)
-      setProgress({ phase: `Insertando ${uniquePersonCount} personas...`, done: 3, total: 5 });
+      // 5. Insert personas (single table, no deduplication)
+      setProgress({ phase: `Insertando ${totalRows} registros...`, done: 3, total: 4 });
       const personaRowsWithCargue = personaRows.map(p => ({
         ...p,
         idcargue,
@@ -320,37 +293,21 @@ export function CargueModule() {
         estado: 'activo',
       }));
 
-      const insertedPersonas = await db.batchInsertPersonas(personaRowsWithCargue);
-      const idMap = new Map(insertedPersonas.map(p => [p.identificacion, p.idpersona]));
+      await db.batchInsertPersonas(personaRowsWithCargue);
 
-      // 6. Insert obligaciones (single query)
-      setProgress({ phase: `Insertando ${obligacionRows.length} obligaciones...`, done: 4, total: 5 });
-      const obligacionRowsWithIds = obligacionRows.map(o => {
-        const { _identificacion, ...fields } = o;
-        return {
-          ...fields,
-          idpersona: idMap.get(_identificacion) || null,
-          idcargue,
-          idusuario: userId,
-          estado: 'activo',
-        };
-      }).filter(o => o.idpersona !== null);
-
-      await db.batchInsertObligaciones(obligacionRowsWithIds);
-
-      // 8. Inactivate previous cargues of same tipo
-      setProgress({ phase: 'Actualizando estado de cargues...', done: 4, total: 5 });
+      // 6. Inactivate previous cargues of same tipo
+      setProgress({ phase: 'Actualizando estado de cargues...', done: 4, total: 4 });
       await db.inactivateCarguesByTipoCargue(selectedBase, selectedTipoCargue, idcargue, userId);
 
-      // 9. Update idcarguegestionar if tipo is "obligacion"
+      // 7. Update idcarguegestionar if tipo is "persona"
       const tipoCargueNombre = cargueTipos.find(ct => ct.idtipocargue === selectedTipoCargue)?.nombre?.toLowerCase();
-      if (tipoCargueNombre === 'obligacion') {
+      if (tipoCargueNombre === 'persona') {
         await db.updateBaseCargueGestionar(selectedBase, idcargue, userId);
       }
 
-      // 10. Done
-      setProgress({ phase: 'Completado', done: 5, total: 5 });
-      toast.success(`Cargue completado: ${obligacionRows.length} obligaciones, ${uniquePersonCount} personas`);
+      // 8. Done
+      setProgress({ phase: 'Completado', done: 4, total: 4 });
+      toast.success(`Cargue completado: ${totalRows} registros en personas`);
 
       // Reset
       setFile(null);

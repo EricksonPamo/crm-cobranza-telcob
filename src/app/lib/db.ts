@@ -566,49 +566,42 @@ export async function updateBaseCargueGestionar(idbase: string, idcarguegestiona
   `;
 }
 
-export async function getCarguesActivosObligacion(idbase: string) {
+export async function getCarguesActivosPersona(idbase: string) {
   const db = ensureConnection();
   return await db<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>`
     SELECT c.idcargue, c.nombrearchivo, c.cantidadregistros
     FROM cargues c
     JOIN cargue_tipo ct ON c.idtipocargue = ct.idtipocargue
-    WHERE c.idbase = ${idbase} AND c.estado = 'activo' AND LOWER(ct.nombre) = 'obligacion'
+    WHERE c.idbase = ${idbase} AND c.estado = 'activo' AND LOWER(ct.nombre) = 'persona'
     ORDER BY c.fechacreacion DESC
   `;
 }
 
 // =====================================================
-// BATCH INSERT: Personas y Obligaciones
+// BATCH INSERT: Personas
 // =====================================================
 
 const PERSONAS_COLUMNS = [
   'idcargue', 'tipodocumento', 'identificacion', 'nombrecompleto', 'nombre', 'apellido',
   'correo', 'departamento', 'provincia', 'distrito', 'direccion', 'estadocivil', 'profesion',
+  'sueldo', 'cuenta', 'numerotarjeta', 'producto', 'subproducto', 'moneda',
+  'deudatotal', 'interes', 'cancelaciondeuda',
   'personadatotexto1', 'personadatotexto2', 'personadatotexto3', 'personadatotexto4', 'personadatotexto5',
   'personadatotexto6', 'personadatotexto7', 'personadatotexto8', 'personadatotexto9', 'personadatotexto10',
-  'idusuario', 'estado',
-];
-
-const OBLIGACIONES_COLUMNS = [
-  'idpersona', 'idcargue', 'cuenta', 'numerotarjeta', 'producto', 'subproducto',
-  'moneda', 'deudatotal', 'interes', 'diamora', 'cancelaciondeuda',
-  'obligaciondatotexto1', 'obligaciondatotexto2', 'obligaciondatotexto3',
-  'obligaciondatotexto4', 'obligaciondatotexto5', 'obligaciondatotexto6',
-  'obligaciondatotexto7', 'obligaciondatotexto8', 'obligaciondatotexto9',
-  'obligaciondatotexto10', 'obligaciondatotexto11', 'obligaciondatotexto12',
-  'obligaciondatotexto13', 'obligaciondatotexto14', 'obligaciondatotexto15',
-  'obligaciondatotexto16', 'obligaciondatotexto17', 'obligaciondatotexto18',
-  'obligaciondatotexto19', 'obligaciondatotexto20', 'obligaciondatotexto21',
-  'obligaciondatotexto22', 'obligaciondatotexto23', 'obligaciondatotexto24',
-  'obligaciondatotexto25', 'obligaciondatotexto26', 'obligaciondatotexto27',
-  'obligaciondatotexto28', 'obligaciondatotexto29', 'obligaciondatotexto30',
-  'obligaciondatotexto31', 'obligaciondatotexto32', 'obligaciondatotexto33',
-  'obligaciondatotexto34', 'obligaciondatotexto35', 'obligaciondatotexto36',
-  'obligaciondatotexto37', 'obligaciondatotexto38', 'obligaciondatotexto39',
-  'obligaciondatotexto40', 'obligaciondatotexto41', 'obligaciondatotexto42',
-  'obligaciondatotexto43', 'obligaciondatotexto44', 'obligaciondatotexto45',
-  'obligaciondatotexto46', 'obligaciondatotexto47', 'obligaciondatotexto48',
-  'obligaciondatotexto49', 'obligaciondatotexto50',
+  'personadatotexto11', 'personadatotexto12', 'personadatotexto13', 'personadatotexto14', 'personadatotexto15',
+  'personadatotexto16', 'personadatotexto17', 'personadatotexto18', 'personadatotexto19', 'personadatotexto20',
+  'personadatotexto21', 'personadatotexto22', 'personadatotexto23', 'personadatotexto24', 'personadatotexto25',
+  'personadatotexto26', 'personadatotexto27', 'personadatotexto28', 'personadatotexto29', 'personadatotexto30',
+  'personadatotexto31', 'personadatotexto32', 'personadatotexto33', 'personadatotexto34', 'personadatotexto35',
+  'personadatotexto36', 'personadatotexto37', 'personadatotexto38', 'personadatotexto39', 'personadatotexto40',
+  'personadatotexto41', 'personadatotexto42', 'personadatotexto43', 'personadatotexto44', 'personadatotexto45',
+  'personadatotexto46', 'personadatotexto47', 'personadatotexto48', 'personadatotexto49', 'personadatotexto50',
+  'personadatonumerico1', 'personadatonumerico2', 'personadatonumerico3', 'personadatonumerico4', 'personadatonumerico5',
+  'personadatonumerico6', 'personadatonumerico7', 'personadatonumerico8', 'personadatonumerico9', 'personadatonumerico10',
+  'personadatonumerico11', 'personadatonumerico12', 'personadatonumerico13', 'personadatonumerico14', 'personadatonumerico15',
+  'personadatofecha1', 'personadatofecha2', 'personadatofecha3', 'personadatofecha4', 'personadatofecha5',
+  'personadatofecha6', 'personadatofecha7', 'personadatofecha8', 'personadatofecha9', 'personadatofecha10',
+  'personadatofecha11', 'personadatofecha12', 'personadatofecha13', 'personadatofecha14', 'personadatofecha15',
   'idusuario', 'estado',
 ];
 
@@ -642,17 +635,6 @@ export async function batchInsertPersonas(rows: Record<string, any>[], batchSize
     allResults.push(...results);
   }
   return allResults;
-}
-
-export async function batchInsertObligaciones(rows: Record<string, any>[], batchSize = 500): Promise<void> {
-  const db = ensureConnection();
-  if (rows.length === 0) return;
-
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    const { query, params } = buildMultiRowInsert('obligaciones', OBLIGACIONES_COLUMNS, batch);
-    await db.query(query, params);
-  }
 }
 
 export async function getPersonasIdByCargue(idcargue: number) {
