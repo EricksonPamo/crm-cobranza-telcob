@@ -207,7 +207,50 @@ export function CargueModule() {
       }
     }
 
-    // 3. Filas sin identificación
+    // 3. Validar tipos de datos en muestra de filas
+    const dateFields = homologacion.filter(c => c.tipoDatoNombre === 'fecha' && c.nombreCampoOrigen && headerMap.has(normalize(c.nombreCampoOrigen)));
+    const numericFields = homologacion.filter(c => c.tipoDatoNombre === 'numerico' && c.nombreCampoOrigen && headerMap.has(normalize(c.nombreCampoOrigen)));
+    const sampleSize = Math.min(dataRows.length, 100);
+    const dateFormats = new Map<string, number>();
+
+    for (const field of dateFields) {
+      const idx = headerMap.get(normalize(field.nombreCampoOrigen!))!;
+      let invalidCount = 0;
+      let sampleCount = 0;
+      for (let r = 0; r < sampleSize; r++) {
+        const val = dataRows[r]?.[idx];
+        if (!val || !val.trim()) continue;
+        sampleCount++;
+        const ddmmyyyy = /^\d{1,2}\/\d{1,2}\/\d{4}/;
+        const yyyymmdd = /^\d{4}-\d{1,2}-\d{1,2}/;
+        if (!ddmmyyyy.test(val) && !yyyymmdd.test(val)) {
+          invalidCount++;
+        }
+      }
+      if (invalidCount > 0 && sampleCount > 0) {
+        warnings.push(`Campo fecha "${field.nombreCampoOrigen}" tiene ${invalidCount} de ${sampleCount} valores con formato no reconocido (se esperan DD/MM/AAAA o AAAA-MM-DD).`);
+      }
+    }
+
+    for (const field of numericFields) {
+      const idx = headerMap.get(normalize(field.nombreCampoOrigen!))!;
+      let invalidCount = 0;
+      let sampleCount = 0;
+      for (let r = 0; r < sampleSize; r++) {
+        const val = dataRows[r]?.[idx];
+        if (!val || !val.trim()) continue;
+        sampleCount++;
+        const clean = val.replace(/[.,]/g, m => m === ',' ? '.' : '');
+        if (isNaN(Number(clean))) {
+          invalidCount++;
+        }
+      }
+      if (invalidCount > 0 && sampleCount > 0) {
+        warnings.push(`Campo numérico "${field.nombreCampoOrigen}" tiene ${invalidCount} de ${sampleCount} valores no numéricos.`);
+      }
+    }
+
+    // 4. Filas sin identificación
     const identField = homologacion.find(c => c.nombreColumna.toLowerCase() === 'identificacion');
     let emptyRows = 0;
     if (identField?.nombreCampoOrigen) {
@@ -262,6 +305,29 @@ export function CargueModule() {
       console.warn('Campos de plantilla no encontrados en CSV:', unmatchedFields);
     }
 
+    // Pre-compute field type map for conversion
+    const dateFieldNames = new Set(
+      homologacion.filter(f => f.tipoDatoNombre === 'fecha').map(f => f.nombreColumna.toLowerCase())
+    );
+    const numericFieldNames = new Set(
+      homologacion.filter(f => f.tipoDatoNombre === 'numerico').map(f => f.nombreColumna.toLowerCase())
+    );
+
+    const convertDate = (val: string): string | null => {
+      if (!val || !val.trim()) return null;
+      const m = val.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+      if (/^\d{4}-\d{1,2}-\d{1,2}/.test(val.trim())) return val.trim().split(' ')[0];
+      return null;
+    };
+
+    const convertNumeric = (val: string): string | null => {
+      if (!val || !val.trim()) return null;
+      const clean = val.trim().replace(/\./g, '').replace(',', '.');
+      const num = Number(clean);
+      return isNaN(num) ? null : String(num);
+    };
+
     // Each CSV row becomes a persona record (no deduplication since obligaciones are now in persona)
     const personaRecords: Record<string, any>[] = [];
     let skippedRows = 0;
@@ -274,10 +340,19 @@ export function CargueModule() {
 
       for (const field of personaFields) {
         const csvIdx = mapField(field);
-        const value = csvIdx !== null && csvIdx < row.length ? row[csvIdx] : '';
+        const rawValue = csvIdx !== null && csvIdx < row.length ? row[csvIdx] : '';
         const colName = field.nombreColumna.toLowerCase();
-        personaRecord[colName] = value || null;
-        if (colName === 'identificacion') identificacion = value;
+
+        let value: string | null = rawValue || null;
+
+        if (value && dateFieldNames.has(colName)) {
+          value = convertDate(value);
+        } else if (value && numericFieldNames.has(colName)) {
+          value = convertNumeric(value);
+        }
+
+        personaRecord[colName] = value;
+        if (colName === 'identificacion') identificacion = rawValue;
       }
 
       if (!identificacion) { skippedRows++; continue; }
