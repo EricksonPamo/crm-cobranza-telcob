@@ -622,17 +622,28 @@ function buildMultiRowInsert(tableName: string, columns: string[], batch: Record
 
 export async function batchInsertPersonas(
   rows: Record<string, any>[],
-  batchSize = 50,
+  batchSize = 100,
   onProgress?: (done: number, total: number) => void
 ): Promise<void> {
   const db = ensureConnection();
   if (rows.length === 0) return;
 
+  const concurrency = 8;
+  const batches: Record<string, any>[][] = [];
   for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    const { query, params } = buildMultiRowInsert('personas', PERSONAS_COLUMNS, batch);
-    await db.query(query, params);
-    onProgress?.(Math.min(i + batchSize, rows.length), rows.length);
+    batches.push(rows.slice(i, i + batchSize));
+  }
+
+  let completed = 0;
+  for (let i = 0; i < batches.length; i += concurrency) {
+    const chunk = batches.slice(i, i + concurrency);
+    await Promise.all(chunk.map(batch => {
+      const { query, params } = buildMultiRowInsert('personas', PERSONAS_COLUMNS, batch);
+      return db.query(query, params).then(() => {
+        completed += batch.length;
+        onProgress?.(completed, rows.length);
+      });
+    }));
   }
 }
 

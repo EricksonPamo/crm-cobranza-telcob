@@ -410,7 +410,7 @@ export function CargueModule() {
         estado: 'activo',
       }));
 
-      await db.batchInsertPersonas(personaRowsWithCargue, 50, (done, total) => {
+      await db.batchInsertPersonas(personaRowsWithCargue, 100, (done, total) => {
         setProgress({ phase: `Insertando ${done} de ${total} registros...`, done, total });
       });
 
@@ -537,7 +537,7 @@ export function CargueModule() {
         estado: 'activo',
       }));
 
-      await db.batchInsertPersonas(personaRowsWithCargue, 50, (done, total) => {
+      await db.batchInsertPersonas(personaRowsWithCargue, 100, (done, total) => {
         setProgress({ phase: `Insertando ${done} de ${total} registros...`, done, total });
       });
 
