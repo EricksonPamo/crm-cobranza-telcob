@@ -1,25 +1,30 @@
-import { neon } from '@neondatabase/serverless';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-const connectionString = import.meta.env.VITE_DATABASE_URL;
-export const sql = connectionString ? neon(connectionString) : null;
-
-function ensureConnection(): NonNullable<typeof sql> {
-  if (!sql) {
-    throw new Error('No hay conexión a la base de datos. Verifique VITE_DATABASE_URL');
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || `API error: ${res.status}`);
   }
-  return sql;
+  return res.json();
 }
 
-export async function testConnection() {
-  try {
-    const db = ensureConnection();
-    const result = await db`SELECT NOW() as current_time`;
-    console.log('Conexión exitosa:', result[0].current_time);
-    return true;
-  } catch (error) {
-    console.error('Error conectando:', error);
-    return false;
-  }
+async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  return apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) });
+}
+
+async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(body) });
+}
+
+async function apiDelete<T>(path: string, body?: unknown): Promise<T> {
+  return apiFetch<T>(path, {
+    method: 'DELETE',
+    body: body ? JSON.stringify(body) : undefined,
+  });
 }
 
 // =====================================================
@@ -81,231 +86,6 @@ export interface Base {
   idusuariomod: string;
   estado: string;
 }
-
-// =====================================================
-// USUARIOS
-// =====================================================
-
-export async function getUsuarios() {
-  const db = ensureConnection();
-  return await db<PerfilUsuario[]>`SELECT * FROM perfiles_usuario WHERE estado = 'activo' ORDER BY fecha_creacion DESC`;
-}
-
-export async function getUsuarioById(id: string) {
-  const db = ensureConnection();
-  const result = await db<PerfilUsuario[]>`SELECT * FROM perfiles_usuario WHERE id = ${id}`;
-  return result[0];
-}
-
-export async function getUsuarioByUsername(username: string) {
-  const db = ensureConnection();
-  const result = await db<PerfilUsuario[]>`SELECT * FROM perfiles_usuario WHERE username = ${username} AND estado = 'activo'`;
-  return result[0];
-}
-
-export async function createUsuario(data: Omit<PerfilUsuario, 'id' | 'fecha_creacion' | 'fecha_actualizacion' | 'ultimo_acceso'>) {
-  const db = ensureConnection();
-  const result = await db<PerfilUsuario[]>`
-    INSERT INTO perfiles_usuario (username, password_hash, nombre_completo, email, tipo_usuario, estado)
-    VALUES (${data.username}, ${data.password_hash}, ${data.nombre_completo}, ${data.email}, ${data.tipo_usuario}, ${data.estado})
-    RETURNING *
-  `;
-  return result[0];
-}
-
-export async function updateUsuario(id: string, data: Partial<PerfilUsuario>) {
-  const db = ensureConnection();
-  const result = await db<PerfilUsuario[]>`
-    UPDATE perfiles_usuario SET
-      nombre_completo = COALESCE(${data.nombre_completo}, nombre_completo),
-      email = COALESCE(${data.email}, email),
-      tipo_usuario = COALESCE(${data.tipo_usuario}, tipo_usuario),
-      estado = COALESCE(${data.estado}, estado)
-    WHERE id = ${id}
-    RETURNING *
-  `;
-  return result[0];
-}
-
-export async function deleteUsuario(id: string) {
-  const db = ensureConnection();
-  await db`UPDATE perfiles_usuario SET estado = 'inactivo' WHERE id = ${id}`;
-}
-
-// =====================================================
-// EMPRESAS
-// =====================================================
-
-export async function getEmpresas() {
-  const db = ensureConnection();
-  return await db<Empresa[]>`SELECT * FROM empresas WHERE estado = 'activo' ORDER BY fechacreacion DESC`;
-}
-
-export async function getEmpresaById(idempresa: string) {
-  const db = ensureConnection();
-  const result = await db<Empresa[]>`SELECT * FROM empresas WHERE idempresa = ${idempresa}`;
-  return result[0];
-}
-
-export async function getEmpresaByRuc(ruc: string) {
-  const db = ensureConnection();
-  const result = await db<Empresa[]>`SELECT * FROM empresas WHERE ruc = ${ruc} AND estado = 'activo'`;
-  return result[0];
-}
-
-export async function createEmpresa(data: Omit<Empresa, 'idempresa' | 'fechacreacion' | 'fechamodificacion'>) {
-  const db = ensureConnection();
-  const result = await db<Empresa[]>`
-    INSERT INTO empresas (razonsocial, ruc, telefono, direccion, email, descripcion, logo, idusuario, idusuariomod, estado)
-    VALUES (${data.razonsocial}, ${data.ruc}, ${data.telefono}, ${data.direccion}, ${data.email}, ${data.descripcion}, ${data.logo}, ${data.idusuario}, ${data.idusuariomod}, ${data.estado})
-    RETURNING *
-  `;
-  return result[0];
-}
-
-export async function updateEmpresa(idempresa: string, data: Partial<Empresa>, idusuariomod: string) {
-  const db = ensureConnection();
-  const result = await db<Empresa[]>`
-    UPDATE empresas SET
-      razonsocial = COALESCE(${data.razonsocial}, razonsocial),
-      ruc = COALESCE(${data.ruc}, ruc),
-      direccion = COALESCE(${data.direccion}, direccion),
-      telefono = COALESCE(${data.telefono}, telefono),
-      email = COALESCE(${data.email}, email),
-      descripcion = COALESCE(${data.descripcion}, descripcion),
-      logo = COALESCE(${data.logo}, logo),
-      estado = COALESCE(${data.estado}, estado),
-      fechamodificacion = NOW(),
-      idusuariomod = ${idusuariomod}
-    WHERE idempresa = ${idempresa}
-    RETURNING *
-  `;
-  return result[0];
-}
-
-export async function deleteEmpresa(idempresa: string, idusuariomod: string) {
-  const db = ensureConnection();
-  await db`UPDATE empresas SET estado = 'inactivo', fechamodificacion = NOW(), idusuariomod = ${idusuariomod} WHERE idempresa = ${idempresa}`;
-}
-
-// =====================================================
-// PRODUCTOS
-// =====================================================
-
-export async function getProductos() {
-  const db = ensureConnection();
-  return await db<Producto[]>`
-    SELECT p.*, e.razonsocial as empresanombre
-    FROM productos p
-    LEFT JOIN empresas e ON p.idempresa = e.idempresa
-    WHERE p.estado = 'activo'
-    ORDER BY p.fechacreacion DESC
-  `;
-}
-
-export async function getProductoById(idproducto: string) {
-  const db = ensureConnection();
-  const result = await db<Producto[]>`
-    SELECT p.*, e.razonsocial as empresanombre
-    FROM productos p
-    LEFT JOIN empresas e ON p.idempresa = e.idempresa
-    WHERE p.idproducto = ${idproducto}
-  `;
-  return result[0];
-}
-
-export async function createProducto(data: Omit<Producto, 'idproducto' | 'fechacreacion' | 'fechamodificacion'>) {
-  const db = ensureConnection();
-  const result = await db<Producto[]>`
-    INSERT INTO productos (nombre, idempresa, idusuario, idusuariomod, estado)
-    VALUES (${data.nombre}, ${data.idempresa}, ${data.idusuario}, ${data.idusuariomod}, ${data.estado})
-    RETURNING *
-  `;
-  return result[0];
-}
-
-export async function updateProducto(idproducto: string, data: Partial<Producto>, idusuariomod: string) {
-  const db = ensureConnection();
-  const result = await db<Producto[]>`
-    UPDATE productos SET
-      nombre = COALESCE(${data.nombre}, nombre),
-      idempresa = COALESCE(${data.idempresa}, idempresa),
-      estado = COALESCE(${data.estado}, estado),
-      fechamodificacion = NOW(),
-      idusuariomod = ${idusuariomod}
-    WHERE idproducto = ${idproducto}
-    RETURNING *
-  `;
-  return result[0];
-}
-
-export async function deleteProducto(idproducto: string, idusuariomod: string) {
-  const db = ensureConnection();
-  await db`UPDATE productos SET estado = 'inactivo', fechamodificacion = NOW(), idusuariomod = ${idusuariomod} WHERE idproducto = ${idproducto}`;
-}
-
-// =====================================================
-// BASES
-// =====================================================
-
-export async function getBases() {
-  const db = ensureConnection();
-  return await db<Base[]>`
-    SELECT b.*, p.nombre as productonombre
-    FROM bases b
-    LEFT JOIN productos p ON b.idproducto = p.idproducto
-    WHERE b.estado = 'activo'
-    ORDER BY b.fechacreacion DESC
-  `;
-}
-
-export async function getBaseById(idbase: string) {
-  const db = ensureConnection();
-  const result = await db<Base[]>`
-    SELECT b.*, p.nombre as productonombre
-    FROM bases b
-    LEFT JOIN productos p ON b.idproducto = p.idproducto
-    WHERE b.idbase = ${idbase}
-  `;
-  return result[0];
-}
-
-export async function createBase(data: Omit<Base, 'idbase' | 'fechacreacion' | 'fechamodificacion'>) {
-  const db = ensureConnection();
-  const result = await db<Base[]>`
-    INSERT INTO bases (nombre, alias, idproducto, idcarguegestionar, maximocuotas, idusuario, idusuariomod, estado)
-    VALUES (${data.nombre}, ${data.alias}, ${data.idproducto}, ${data.idcarguegestionar}, ${data.maximocuotas}, ${data.idusuario}, ${data.idusuariomod}, ${data.estado})
-    RETURNING *
-  `;
-  return result[0];
-}
-
-export async function updateBase(idbase: string, data: Partial<Base>, idusuariomod: string) {
-  const db = ensureConnection();
-  const result = await db<Base[]>`
-    UPDATE bases SET
-      nombre = COALESCE(${data.nombre}, nombre),
-      alias = COALESCE(${data.alias}, alias),
-      idproducto = COALESCE(${data.idproducto}, idproducto),
-      idcarguegestionar = COALESCE(${data.idcarguegestionar}, idcarguegestionar),
-      maximocuotas = COALESCE(${data.maximocuotas}, maximocuotas),
-      estado = COALESCE(${data.estado}, estado),
-      fechamodificacion = NOW(),
-      idusuariomod = ${idusuariomod}
-    WHERE idbase = ${idbase}
-    RETURNING *
-  `;
-  return result[0];
-}
-
-export async function deleteBase(idbase: string, idusuariomod: string) {
-  const db = ensureConnection();
-  await db`UPDATE bases SET estado = 'inactivo', fechamodificacion = NOW(), idusuariomod = ${idusuariomod} WHERE idbase = ${idbase}`;
-}
-
-// =====================================================
-// TIPOS: CargueTipo, TablaDef, DatoTipo, TablaColumna, ProductoHomologacion
-// =====================================================
 
 export interface CargueTipo {
   idtipocargue: string;
@@ -382,12 +162,130 @@ export type ProductoHomologacionInput = Omit<ProductoHomologacion,
 >;
 
 // =====================================================
+// TEST CONNECTION
+// =====================================================
+
+export async function testConnection() {
+  try {
+    const result = await apiFetch<{ success: boolean; time: string }>('/test-connection');
+    console.log('Conexión exitosa:', result.time);
+    return true;
+  } catch (error) {
+    console.error('Error conectando:', error);
+    return false;
+  }
+}
+
+// =====================================================
+// USUARIOS
+// =====================================================
+
+export async function getUsuarios() {
+  return apiFetch<PerfilUsuario[]>('/usuarios');
+}
+
+export async function getUsuarioById(id: string) {
+  return apiFetch<PerfilUsuario>(`/usuarios/id/${id}`);
+}
+
+export async function getUsuarioByUsername(username: string) {
+  return apiFetch<PerfilUsuario>(`/usuarios/username/${encodeURIComponent(username)}`);
+}
+
+export async function createUsuario(data: Omit<PerfilUsuario, 'id' | 'fecha_creacion' | 'fecha_actualizacion' | 'ultimo_acceso'>) {
+  return apiPost<PerfilUsuario>('/usuarios', data);
+}
+
+export async function updateUsuario(id: string, data: Partial<PerfilUsuario>) {
+  return apiPut<PerfilUsuario>(`/usuarios/${id}`, data);
+}
+
+export async function deleteUsuario(id: string) {
+  return apiDelete<void>(`/usuarios/${id}`);
+}
+
+// =====================================================
+// EMPRESAS
+// =====================================================
+
+export async function getEmpresas() {
+  return apiFetch<Empresa[]>('/empresas');
+}
+
+export async function getEmpresaById(idempresa: string) {
+  return apiFetch<Empresa>(`/empresas/${idempresa}`);
+}
+
+export async function getEmpresaByRuc(ruc: string) {
+  return apiFetch<Empresa>(`/empresas/ruc/${encodeURIComponent(ruc)}`);
+}
+
+export async function createEmpresa(data: Omit<Empresa, 'idempresa' | 'fechacreacion' | 'fechamodificacion'>) {
+  return apiPost<Empresa>('/empresas', data);
+}
+
+export async function updateEmpresa(idempresa: string, data: Partial<Empresa>, idusuariomod: string) {
+  return apiPut<Empresa>(`/empresas/${idempresa}`, { ...data, idusuariomod });
+}
+
+export async function deleteEmpresa(idempresa: string, idusuariomod: string) {
+  return apiDelete<void>(`/empresas/${idempresa}`, { idusuariomod });
+}
+
+// =====================================================
+// PRODUCTOS
+// =====================================================
+
+export async function getProductos() {
+  return apiFetch<Producto[]>('/productos');
+}
+
+export async function getProductoById(idproducto: string) {
+  return apiFetch<Producto>(`/productos/${idproducto}`);
+}
+
+export async function createProducto(data: Omit<Producto, 'idproducto' | 'fechacreacion' | 'fechamodificacion'>) {
+  return apiPost<Producto>('/productos', data);
+}
+
+export async function updateProducto(idproducto: string, data: Partial<Producto>, idusuariomod: string) {
+  return apiPut<Producto>(`/productos/${idproducto}`, { ...data, idusuariomod });
+}
+
+export async function deleteProducto(idproducto: string, idusuariomod: string) {
+  return apiDelete<void>(`/productos/${idproducto}`, { idusuariomod });
+}
+
+// =====================================================
+// BASES
+// =====================================================
+
+export async function getBases() {
+  return apiFetch<Base[]>('/bases');
+}
+
+export async function getBaseById(idbase: string) {
+  return apiFetch<Base>(`/bases/${idbase}`);
+}
+
+export async function createBase(data: Omit<Base, 'idbase' | 'fechacreacion' | 'fechamodificacion'>) {
+  return apiPost<Base>('/bases', data);
+}
+
+export async function updateBase(idbase: string, data: Partial<Base>, idusuariomod: string) {
+  return apiPut<Base>(`/bases/${idbase}`, { ...data, idusuariomod });
+}
+
+export async function deleteBase(idbase: string, idusuariomod: string) {
+  return apiDelete<void>(`/bases/${idbase}`, { idusuariomod });
+}
+
+// =====================================================
 // CARGUE TIPO
 // =====================================================
 
 export async function getCargueTipos() {
-  const db = ensureConnection();
-  return await db<CargueTipo[]>`SELECT * FROM cargue_tipo WHERE estado = 'activo' ORDER BY nombre`;
+  return apiFetch<CargueTipo[]>('/cargue-tipos');
 }
 
 // =====================================================
@@ -395,8 +293,7 @@ export async function getCargueTipos() {
 // =====================================================
 
 export async function getTablas() {
-  const db = ensureConnection();
-  return await db<TablaDef[]>`SELECT * FROM tabla WHERE estado = 'activo' ORDER BY nombre`;
+  return apiFetch<TablaDef[]>('/tablas');
 }
 
 // =====================================================
@@ -404,8 +301,7 @@ export async function getTablas() {
 // =====================================================
 
 export async function getDatoTipos() {
-  const db = ensureConnection();
-  return await db<DatoTipo[]>`SELECT * FROM dato_tipo WHERE estado = 'activo' ORDER BY nombre`;
+  return apiFetch<DatoTipo[]>('/dato-tipos');
 }
 
 // =====================================================
@@ -413,22 +309,7 @@ export async function getDatoTipos() {
 // =====================================================
 
 export async function getTablaColumnaByTipoCargue(idtipocargue: string) {
-  const db = ensureConnection();
-  return await db<TablaColumna[]>`
-    SELECT tc.idhomologacion, tc.idtipocargue, tc.idtabla,
-           tc.nombrecolumna as "nombreColumna",
-           tc.idtipodato as "idtipoDato",
-           tc.esobligatorio, tc.esfiltro,
-           ct.nombre as "tipoCargueNombre",
-           t.nombre as "tablaNombre",
-           dt.nombre as "tipoDatoNombre"
-    FROM tabla_columna tc
-    JOIN cargue_tipo ct ON tc.idtipocargue = ct.idtipocargue
-    JOIN tabla t ON tc.idtabla = t.idtabla
-    JOIN dato_tipo dt ON tc.idtipodato = dt.idtipodato
-    WHERE tc.idtipocargue = ${idtipocargue}
-    ORDER BY t.nombre, tc.nombrecolumna
-  `;
+  return apiFetch<TablaColumna[]>(`/tabla-columna/${idtipocargue}`);
 }
 
 // =====================================================
@@ -436,48 +317,11 @@ export async function getTablaColumnaByTipoCargue(idtipocargue: string) {
 // =====================================================
 
 export async function getProductoHomologaciones() {
-  const db = ensureConnection();
-  return await db<ProductoHomologacion[]>`
-    SELECT ph.idproducto, ph.idhomologacion, ph.idtipocargue, ph.idtabla,
-           ph.nombrecolumna as "nombreColumna",
-           ph.tipodato as "tipoDato",
-           ph.obligatorio, ph.filtro,
-           ph.nombrecampoorigen as "nombreCampoOrigen",
-           ph.nombrealiasorigen as "nombreAliasOrigen",
-           ph.fecha_creacion, ph.idusuariocrea,
-           ph.fechamodificacion, ph.idusuariomod, ph.estado,
-           p.nombre as "productoNombre",
-           ct.nombre as "tipoCargueNombre",
-           t.nombre as "tablaNombre",
-           dt.nombre as "tipoDatoNombre"
-    FROM producto_homologacion ph
-    JOIN productos p ON ph.idproducto = p.idproducto
-    JOIN cargue_tipo ct ON ph.idtipocargue = ct.idtipocargue
-    JOIN tabla t ON ph.idtabla = t.idtabla
-    JOIN dato_tipo dt ON ph.tipodato = dt.idtipodato
-    ORDER BY p.nombre, ct.nombre, t.nombre, ph.nombrecolumna
-  `;
+  return apiFetch<ProductoHomologacion[]>('/producto-homologacion');
 }
 
 export async function createProductoHomologacionBatch(records: ProductoHomologacionInput[]) {
-  const db = ensureConnection();
-  const results = await Promise.all(
-    records.map(record =>
-      db<ProductoHomologacion[]>`
-        INSERT INTO producto_homologacion
-          (idproducto, idhomologacion, idtipocargue, idtabla, nombrecolumna,
-           tipodato, obligatorio, filtro, nombrecampoorigen, nombrealiasorigen,
-           idusuariocrea, idusuariomod, estado)
-        VALUES (${record.idproducto}, ${record.idhomologacion}, ${record.idtipocargue},
-                ${record.idtabla}, ${record.nombreColumna}, ${record.tipoDato},
-                ${record.obligatorio}, ${record.filtro}, ${record.nombreCampoOrigen},
-                ${record.nombreAliasOrigen}, ${record.idusuariocrea}, ${record.idusuariomod},
-                ${record.estado})
-        RETURNING *
-      `.then(r => r[0])
-    )
-  );
-  return results;
+  return apiPost<ProductoHomologacion[]>('/producto-homologacion/batch', records);
 }
 
 export async function updateProductoHomologacion(
@@ -486,25 +330,15 @@ export async function updateProductoHomologacion(
   data: Partial<Pick<ProductoHomologacion, 'obligatorio' | 'filtro' | 'nombreCampoOrigen' | 'nombreAliasOrigen' | 'estado'>>,
   idusuariomod: string
 ) {
-  const db = ensureConnection();
-  const result = await db<ProductoHomologacion[]>`
-    UPDATE producto_homologacion SET
-      obligatorio = COALESCE(${data.obligatorio}, obligatorio),
-      filtro = COALESCE(${data.filtro}, filtro),
-      nombrecampoorigen = COALESCE(${data.nombreCampoOrigen}, nombrecampoorigen),
-      nombrealiasorigen = COALESCE(${data.nombreAliasOrigen}, nombrealiasorigen),
-      estado = COALESCE(${data.estado}, estado),
-      fechamodificacion = NOW(),
-      idusuariomod = ${idusuariomod}
-    WHERE idproducto = ${idproducto} AND idhomologacion = ${idhomologacion}
-    RETURNING *
-  `;
-  return result[0];
+  return apiPut<ProductoHomologacion>(`/producto-homologacion/${idproducto}/${idhomologacion}`, { ...data, idusuariomod });
 }
 
 export async function deleteProductoHomologacion(idproducto: string, idhomologacion: string, idusuariomod: string) {
-  const db = ensureConnection();
-  await db`UPDATE producto_homologacion SET estado = 'inactivo', fechamodificacion = NOW(), idusuariomod = ${idusuariomod} WHERE idproducto = ${idproducto} AND idhomologacion = ${idhomologacion}`;
+  return apiDelete<void>(`/producto-homologacion/${idproducto}/${idhomologacion}`, { idusuariomod });
+}
+
+export async function getProductoHomologacionByProductoTipo(idproducto: string, idtipocargue: string) {
+  return apiFetch<ProductoHomologacion[]>(`/producto-homologacion/${idproducto}/${idtipocargue}`);
 }
 
 // =====================================================
@@ -512,23 +346,7 @@ export async function deleteProductoHomologacion(idproducto: string, idhomologac
 // =====================================================
 
 export async function getCarguesByProducto(idproducto: string) {
-  const db = ensureConnection();
-  return await db<Cargue[]>`
-    SELECT c.idcargue, c.idtipocargue, c.idbase,
-           c.nombrearchivo, c.cantidadregistros,
-           c.fechacreacion, c.idusuario, c.fechamodificacion, c.idusuariomod, c.estado,
-           p.nombre as "productoNombre",
-           b.nombre as "baseNombre",
-           ct.nombre as "tipoCargueNombre",
-           pu.nombre_completo as "usuarioNombre"
-    FROM cargues c
-    JOIN bases b ON c.idbase = b.idbase
-    JOIN productos p ON b.idproducto = p.idproducto
-    JOIN cargue_tipo ct ON c.idtipocargue = ct.idtipocargue
-    JOIN perfiles_usuario pu ON c.idusuario = pu.id
-    WHERE b.idproducto = ${idproducto}
-    ORDER BY c.fechacreacion DESC
-  `;
+  return apiFetch<Cargue[]>(`/cargues/${idproducto}`);
 }
 
 export async function createCargue(data: {
@@ -540,152 +358,48 @@ export async function createCargue(data: {
   idusuariomod: string;
   estado: string;
 }) {
-  const db = ensureConnection();
-  const result = await db<{ idcargue: number }[]>`
-    INSERT INTO cargues (idtipocargue, idbase, nombre, nombrearchivo, cantidadregistros, idusuario, idusuariomod, estado)
-    VALUES (${data.idtipocargue}, ${data.idbase}, ${data.nombrearchivo}, ${data.nombrearchivo}, ${data.cantidadregistros}, ${data.idusuario}, ${data.idusuariomod}, ${data.estado})
-    RETURNING idcargue
-  `;
-  return result[0];
+  return apiPost<{ idcargue: number }>('/cargues', data);
 }
 
 export async function inactivateCarguesByTipoCargue(idbase: string, idtipocargue: string, excludeIdcargue: number, idusuariomod: string) {
-  const db = ensureConnection();
-  await db`
-    UPDATE cargues SET estado = 'inactivo', fechamodificacion = NOW(), idusuariomod = ${idusuariomod}
-    WHERE idbase = ${idbase} AND idtipocargue = ${idtipocargue} AND idcargue != ${excludeIdcargue} AND estado = 'activo'
-  `;
+  return apiPut<void>('/cargues/inactivate', { idbase, idtipocargue, excludeIdcargue, idusuariomod });
 }
 
 export async function updateBaseCargueGestionar(idbase: string, idcarguegestionar: number | null, idusuariomod: string) {
-  const db = ensureConnection();
-  await db`
-    UPDATE bases SET idcarguegestionar = ${idcarguegestionar}, fechamodificacion = NOW(), idusuariomod = ${idusuariomod}
-    WHERE idbase = ${idbase}
-  `;
+  return apiPut<void>(`/bases/${idbase}/cargue-gestionar`, { idcarguegestionar, idusuariomod });
 }
 
 export async function getCarguesActivosPersona(idbase: string) {
-  const db = ensureConnection();
-  return await db<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>`
-    SELECT c.idcargue, c.nombrearchivo, c.cantidadregistros
-    FROM cargues c
-    JOIN cargue_tipo ct ON c.idtipocargue = ct.idtipocargue
-    WHERE c.idbase = ${idbase} AND c.estado = 'activo' AND LOWER(ct.nombre) = 'persona'
-    ORDER BY c.fechacreacion DESC
-  `;
+  return apiFetch<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>(`/cargues-activos-persona/${idbase}`);
 }
 
 // =====================================================
 // BATCH INSERT: Personas
 // =====================================================
 
-const PERSONAS_COLUMNS = [
-  'idcargue', 'tipodocumento', 'identificacion', 'nombrecompleto', 'nombre', 'apellido',
-  'correo', 'departamento', 'provincia', 'distrito', 'direccion', 'estadocivil', 'profesion',
-  'sueldo', 'cuenta', 'numerotarjeta', 'producto', 'subproducto', 'moneda',
-  'deudatotal', 'interes', 'cancelaciondeuda',
-  'personadatotexto1', 'personadatotexto2', 'personadatotexto3', 'personadatotexto4', 'personadatotexto5',
-  'personadatotexto6', 'personadatotexto7', 'personadatotexto8', 'personadatotexto9', 'personadatotexto10',
-  'personadatotexto11', 'personadatotexto12', 'personadatotexto13', 'personadatotexto14', 'personadatotexto15',
-  'personadatotexto16', 'personadatotexto17', 'personadatotexto18', 'personadatotexto19', 'personadatotexto20',
-  'personadatotexto21', 'personadatotexto22', 'personadatotexto23', 'personadatotexto24', 'personadatotexto25',
-  'personadatotexto26', 'personadatotexto27', 'personadatotexto28', 'personadatotexto29', 'personadatotexto30',
-  'personadatotexto31', 'personadatotexto32', 'personadatotexto33', 'personadatotexto34', 'personadatotexto35',
-  'personadatotexto36', 'personadatotexto37', 'personadatotexto38', 'personadatotexto39', 'personadatotexto40',
-  'personadatotexto41', 'personadatotexto42', 'personadatotexto43', 'personadatotexto44', 'personadatotexto45',
-  'personadatotexto46', 'personadatotexto47', 'personadatotexto48', 'personadatotexto49', 'personadatotexto50',
-  'personadatonumerico1', 'personadatonumerico2', 'personadatonumerico3', 'personadatonumerico4', 'personadatonumerico5',
-  'personadatonumerico6', 'personadatonumerico7', 'personadatonumerico8', 'personadatonumerico9', 'personadatonumerico10',
-  'personadatonumerico11', 'personadatonumerico12', 'personadatonumerico13', 'personadatonumerico14', 'personadatonumerico15',
-  'personadatofecha1', 'personadatofecha2', 'personadatofecha3', 'personadatofecha4', 'personadatofecha5',
-  'personadatofecha6', 'personadatofecha7', 'personadatofecha8', 'personadatofecha9', 'personadatofecha10',
-  'personadatofecha11', 'personadatofecha12', 'personadatofecha13', 'personadatofecha14', 'personadatofecha15',
-  'idusuario', 'estado',
-];
-
-function buildMultiRowInsert(tableName: string, columns: string[], batch: Record<string, any>[]): { query: string; params: any[] } {
-  const params: any[] = [];
-  const valueRows: string[] = [];
-  for (const row of batch) {
-    const rowPlaceholders: string[] = [];
-    for (const col of columns) {
-      const paramIdx = params.length + 1;
-      const val = row[col];
-      params.push((val === undefined || val === null || val === '') ? null : val);
-      rowPlaceholders.push(`$${paramIdx}`);
-    }
-    valueRows.push(`(${rowPlaceholders.join(',')})`);
-  }
-  return { query: `INSERT INTO ${tableName} (${columns.join(',')}) VALUES ${valueRows.join(',')}`, params };
-}
-
 export async function batchInsertPersonas(
   rows: Record<string, any>[],
   batchSize = 200,
   onProgress?: (done: number, total: number) => void
 ): Promise<void> {
-  const db = ensureConnection();
   if (rows.length === 0) return;
 
-  const concurrency = 8;
-  const batches: Record<string, any>[][] = [];
-  for (let i = 0; i < rows.length; i += batchSize) {
-    batches.push(rows.slice(i, i + batchSize));
-  }
-
-  let completed = 0;
-  for (let i = 0; i < batches.length; i += concurrency) {
-    const chunk = batches.slice(i, i + concurrency);
-    await Promise.all(chunk.map(batch => {
-      const { query, params } = buildMultiRowInsert('personas', PERSONAS_COLUMNS, batch);
-      return db.query(query, params).then(() => {
-        completed += batch.length;
-        onProgress?.(completed, rows.length);
-      });
-    }));
+  const chunkSize = 5000;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const res = await apiPost<{ success: boolean; inserted: number }>('/personas/batch', {
+      rows: chunk,
+      batchSize,
+    });
+    const inserted = Math.min(i + chunkSize, rows.length);
+    onProgress?.(inserted, rows.length);
   }
 }
 
 export async function getPersonasIdByCargue(idcargue: number) {
-  const db = ensureConnection();
-  return await db<{ idpersona: string; identificacion: string }[]>`
-    SELECT idpersona, identificacion FROM personas WHERE idcargue = ${idcargue}
-  `;
-}
-
-export async function getProductoHomologacionByProductoTipo(idproducto: string, idtipocargue: string) {
-  const db = ensureConnection();
-  return await db<ProductoHomologacion[]>`
-    SELECT ph.idproducto, ph.idhomologacion, ph.idtipocargue, ph.idtabla,
-           ph.nombrecolumna as "nombreColumna",
-           ph.tipodato as "tipoDato",
-           ph.obligatorio, ph.filtro,
-           ph.nombrecampoorigen as "nombreCampoOrigen",
-           ph.nombrealiasorigen as "nombreAliasOrigen",
-           ph.fecha_creacion, ph.idusuariocrea,
-           ph.fechamodificacion, ph.idusuariomod, ph.estado,
-           p.nombre as "productoNombre",
-           ct.nombre as "tipoCargueNombre",
-           t.nombre as "tablaNombre",
-           dt.nombre as "tipoDatoNombre"
-    FROM producto_homologacion ph
-    JOIN productos p ON ph.idproducto = p.idproducto
-    JOIN cargue_tipo ct ON ph.idtipocargue = ct.idtipocargue
-    JOIN tabla t ON ph.idtabla = t.idtabla
-    JOIN dato_tipo dt ON ph.tipodato = dt.idtipodato
-    WHERE ph.idproducto = ${idproducto} AND ph.idtipocargue = ${idtipocargue} AND ph.estado = 'activo'
-    ORDER BY t.nombre, ph.nombrecolumna
-  `;
+  return apiFetch<{ idpersona: string; identificacion: string }[]>(`/personas/by-cargue/${idcargue}`);
 }
 
 export async function getBasesByProducto(idproducto: string) {
-  const db = ensureConnection();
-  return await db<Base[]>`
-    SELECT b.*, p.nombre as productonombre
-    FROM bases b
-    LEFT JOIN productos p ON b.idproducto = p.idproducto
-    WHERE b.idproducto = ${idproducto} AND b.estado = 'activo'
-    ORDER BY b.fechacreacion DESC
-  `;
+  return apiFetch<Base[]>(`/bases/producto/${idproducto}`);
 }

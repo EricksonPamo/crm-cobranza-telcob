@@ -20,11 +20,16 @@ export default defineConfig({
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
-  // Environment variables - Neon.tech database
-  define: {
-    'process.env.DATABASE_URL': JSON.stringify(process.env.DATABASE_URL || ''),
+  // Proxy API requests to Express backend
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
   },
 
-  // Expose VITE_DATABASE_URL to client-side code
+  // Expose VITE_ env vars to client-side code
   envPrefix: ['VITE_'],
 })

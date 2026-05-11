@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, roleMapBDtoApp } from '../types/user';
-import { sql } from '../lib/db';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -30,23 +29,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (username: string, _password: string): Promise<boolean> => {
     setAuthError(null);
     try {
-      if (!sql) {
-        throw new Error('No hay conexión a la base de datos. Verifique VITE_DATABASE_URL');
+      const API_BASE = import.meta.env.VITE_API_URL || '/api';
+      const res = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+      if (!res.ok) {
+        throw new Error('Error al conectar con el servidor');
       }
 
-      const users = await sql`
-        SELECT id, username, nombre_completo, email, tipo_usuario, estado
-        FROM perfiles_usuario
-        WHERE (username = ${username} OR email = ${username})
-          AND estado = 'activo'
-      `;
+      const dbUser = await res.json();
 
-      if (users.length === 0) {
+      if (!dbUser) {
         setAuthError('Usuario no encontrado. Verifique que el usuario exista y esté activo.');
         return false;
       }
 
-      const dbUser = users[0];
       const appRol = roleMapBDtoApp[dbUser.tipo_usuario] || 'cobrador';
 
       const user: User = {
