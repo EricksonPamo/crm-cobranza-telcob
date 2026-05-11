@@ -455,7 +455,6 @@ export async function getProductoHomologaciones() {
     JOIN cargue_tipo ct ON ph.idtipocargue = ct.idtipocargue
     JOIN tabla t ON ph.idtabla = t.idtabla
     JOIN dato_tipo dt ON ph.tipodato = dt.idtipodato
-    WHERE ph.estado = 'activo'
     ORDER BY p.nombre, ct.nombre, t.nombre, ph.nombrecolumna
   `;
 }
