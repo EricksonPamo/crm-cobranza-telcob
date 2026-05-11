@@ -604,25 +604,33 @@ const PERSONAS_COLUMNS = [
   'idusuario', 'estado',
 ];
 
-function buildMultiRowInsert(tableName: string, columns: string[], batch: Record<string, any>[]): { query: string; params: any[] } {
-  const params: any[] = [];
-  const valueRows: string[] = [];
-  for (const row of batch) {
-    const rowPlaceholders: string[] = [];
-    for (const col of columns) {
-      const paramIdx = params.length + 1;
+const PERSONAS_COLUMN_TYPES = PERSONAS_COLUMNS.map(col => {
+  if (col === 'idcargue') return 'bigint';
+  if (col.startsWith('personadatonumerico')) return 'numeric';
+  if (col.startsWith('personadatofecha')) return 'text';
+  return 'text';
+});
+
+function buildUnnestInsert(tableName: string, columns: string[], colTypes: string[], batch: Record<string, any>[]): { query: string; params: any[] } {
+  const colList = columns.join(',');
+  const unnestExprs = columns.map((col, i) => `$${i + 1}::${colTypes}[]`).join(', ');
+  const params = columns.map((col, _i) => {
+    const arr: (string | null)[] = [];
+    for (const row of batch) {
       const val = row[col];
-      params.push((val === undefined || val === null || val === '') ? null : val);
-      rowPlaceholders.push(`$${paramIdx}`);
+      arr.push((val === undefined || val === null || val === '') ? null : String(val));
     }
-    valueRows.push(`(${rowPlaceholders.join(',')})`);
-  }
-  return { query: `INSERT INTO ${tableName} (${columns.join(',')}) VALUES ${valueRows.join(',')}`, params };
+    return arr;
+  });
+  return {
+    query: `INSERT INTO ${tableName} (${colList}) SELECT * FROM unnest(${unnestExprs})`,
+    params,
+  };
 }
 
 export async function batchInsertPersonas(
   rows: Record<string, any>[],
-  batchSize = 200,
+  batchSize = 2000,
   onProgress?: (done: number, total: number) => void
 ): Promise<void> {
   const db = ensureConnection();
@@ -638,7 +646,7 @@ export async function batchInsertPersonas(
   for (let i = 0; i < batches.length; i += concurrency) {
     const chunk = batches.slice(i, i + concurrency);
     await Promise.all(chunk.map(batch => {
-      const { query, params } = buildMultiRowInsert('personas', PERSONAS_COLUMNS, batch);
+      const { query, params } = buildUnnestInsert('personas', PERSONAS_COLUMNS, PERSONAS_COLUMN_TYPES, batch);
       return db.query(query, params).then(() => {
         completed += batch.length;
         onProgress?.(completed, rows.length);
