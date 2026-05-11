@@ -9,12 +9,15 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../ui/table';
 import {
-  Upload, FileSpreadsheet, AlertCircle, ChevronLeft, ChevronRight, Loader2,
+  Upload, FileSpreadsheet, AlertCircle, ChevronLeft, ChevronRight, Loader2, AlertTriangle, CheckCircle2, XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDatabase } from '../../context/DatabaseContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Cargue, ProductoHomologacion } from '../../lib/db';
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from '../ui/dialog';
 
 export function CargueModule() {
   const db = useDatabase();
@@ -43,6 +46,17 @@ export function CargueModule() {
   // Upload state
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ phase: '', done: 0, total: 0 });
+
+  // Validation dialog state
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [validationCanProceed, setValidationCanProceed] = useState(false);
+  const [pendingUploadData, setPendingUploadData] = useState<{
+    csvRows: string[][];
+    homologacion: ProductoHomologacion[];
+    totalRows: number;
+  } | null>(null);
 
   // Pagination
   const [paginaActual, setPaginaActual] = useState(1);
@@ -142,6 +156,77 @@ export function CargueModule() {
     });
   };
 
+  // ===================== VALIDATION =====================
+  interface ValidationResult {
+    errors: string[];
+    warnings: string[];
+    canProceed: boolean;
+  }
+
+  const normalize = (s: string) =>
+    s.toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  const validateCsvAgainstPlantilla = (
+    csvRows: string[][],
+    homologacion: ProductoHomologacion[],
+  ): ValidationResult => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (csvRows.length < 2) {
+      errors.push('El archivo no contiene filas de datos (solo encabezados o vacío).');
+      return { errors, warnings, canProceed: false };
+    }
+
+    const csvHeaders = csvRows[0];
+    const csvHeadersNorm = csvHeaders.map(normalize);
+    const headerMap = new Map<string, number>();
+    csvHeaders.forEach((h, i) => headerMap.set(normalize(h), i));
+    const dataRows = csvRows.slice(1);
+
+    // 1. Campos obligatorios sin columna en CSV
+    for (const campo of homologacion) {
+      if (campo.obligatorio && campo.nombreCampoOrigen) {
+        if (!headerMap.has(normalize(campo.nombreCampoOrigen))) {
+          errors.push(`Campo obligatorio "${campo.nombreCampoOrigen}" → ${campo.nombreColumna} no encontrado en el archivo.`);
+        }
+      }
+    }
+
+    // 2. Campos no obligatorios sin match
+    for (const campo of homologacion) {
+      if (!campo.obligatorio && campo.nombreCampoOrigen) {
+        if (!headerMap.has(normalize(campo.nombreCampoOrigen))) {
+          warnings.push(`Campo "${campo.nombreCampoOrigen}" → ${campo.nombreColumna} no encontrado en el archivo.`);
+        }
+      }
+    }
+
+    // 3. Columnas del CSV no mapeadas en la plantilla
+    const plantillaHeaders = new Set(
+      homologacion.filter(c => c.nombreCampoOrigen).map(c => normalize(c.nombreCampoOrigen!))
+    );
+    for (const header of csvHeaders) {
+      if (!plantillaHeaders.has(normalize(header))) {
+        warnings.push(`Columna "${header}" del archivo no está en la plantilla.`);
+      }
+    }
+
+    // 4. Filas sin identificación
+    const identField = homologacion.find(c => c.nombreColumna.toLowerCase() === 'identificacion');
+    if (identField?.nombreCampoOrigen) {
+      const idx = headerMap.get(normalize(identField.nombreCampoOrigen));
+      if (idx !== undefined) {
+        const emptyCount = dataRows.filter(row => !row[idx] || !row[idx].trim()).length;
+        if (emptyCount > 0) {
+          warnings.push(`${emptyCount} fila(s) sin identificación serán omitidas.`);
+        }
+      }
+    }
+
+    return { errors, warnings, canProceed: errors.length === 0 };
+  };
+
   // ===================== MAPPING WITH PLANTILLA =====================
   const mapCsvToRecords = (
     csvRows: string[][],
@@ -209,6 +294,75 @@ export function CargueModule() {
     };
   };
 
+  // ===================== CONTINUE UPLOAD AFTER VALIDATION =====================
+  const handleContinueUpload = async () => {
+    if (!pendingUploadData || !file) return;
+    setShowValidationDialog(false);
+
+    const { csvRows, homologacion } = pendingUploadData;
+    const userId = requireUser();
+
+    try {
+      setUploading(true);
+
+      const { personaRows, totalRows } = mapCsvToRecords(csvRows, homologacion);
+
+      if (personaRows.length === 0) {
+        toast.error('No se encontraron registros válidos después de la validación.');
+        setUploading(false);
+        setProgress({ phase: '', done: 0, total: 0 });
+        return;
+      }
+
+      setProgress({ phase: 'Creando registro de cargue...', done: 3, total: 5 });
+      const cargueRecord = await db.createCargue({
+        idtipocargue: selectedTipoCargue,
+        idbase: selectedBase,
+        nombrearchivo: file.name,
+        cantidadregistros: totalRows,
+        idusuario: userId,
+        idusuariomod: userId,
+        estado: 'activo',
+      });
+      const idcargue = cargueRecord.idcargue;
+
+      const personaRowsWithCargue = personaRows.map(p => ({
+        ...p,
+        idcargue,
+        idusuario: userId,
+        estado: 'activo',
+      }));
+
+      await db.batchInsertPersonas(personaRowsWithCargue, 50, (done, total) => {
+        setProgress({ phase: `Insertando ${done} de ${total} registros...`, done, total });
+      });
+
+      setProgress({ phase: 'Actualizando estado de cargues...', done: 4, total: 5 });
+      await db.inactivateCarguesByTipoCargue(selectedBase, selectedTipoCargue, idcargue, userId);
+
+      const tipoCargueNombre = cargueTipos.find(ct => ct.idtipocargue === selectedTipoCargue)?.nombre?.toLowerCase();
+      if (tipoCargueNombre === 'persona') {
+        await db.updateBaseCargueGestionar(selectedBase, idcargue, userId);
+      }
+
+      setProgress({ phase: 'Completado', done: 5, total: 5 });
+      toast.success(`Cargue completado: ${totalRows} registros en personas`);
+
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      const updatedCargues = await db.getCarguesByProducto(selectedProducto);
+      setCargues(updatedCargues);
+    } catch (error: any) {
+      console.error('Error en cargue:', error);
+      toast.error(error?.message || 'Error al procesar el cargue');
+    } finally {
+      setUploading(false);
+      setProgress({ phase: '', done: 0, total: 0 });
+      setPendingUploadData(null);
+    }
+  };
+
   // ===================== UPLOAD PROCESS =====================
   const handleUpload = async () => {
     if (!selectedProducto) { toast.error('Seleccione un producto'); return; }
@@ -236,8 +390,23 @@ export function CargueModule() {
       const text = await file.text();
       const csvRows = parseCSV(text);
 
-      // 3. Map CSV to records using plantilla
-      setProgress({ phase: 'Mapeando datos...', done: 2, total: 4 });
+      // 3. Validate CSV against plantilla
+      setProgress({ phase: 'Validando archivo...', done: 2, total: 5 });
+      const validation = validateCsvAgainstPlantilla(csvRows, homologacion);
+
+      if (validation.errors.length > 0 || validation.warnings.length > 0) {
+        setValidationErrors(validation.errors);
+        setValidationWarnings(validation.warnings);
+        setValidationCanProceed(validation.canProceed);
+        setPendingUploadData({ csvRows, homologacion, totalRows: 0 });
+        setShowValidationDialog(true);
+        setUploading(false);
+        setProgress({ phase: '', done: 0, total: 0 });
+        return; // User will confirm or cancel via dialog
+      }
+
+      // 4. Map CSV to records using plantilla
+      setProgress({ phase: 'Mapeando datos...', done: 2, total: 5 });
       const { personaRows, totalRows } = mapCsvToRecords(csvRows, homologacion);
 
       if (personaRows.length === 0) {
@@ -272,7 +441,7 @@ export function CargueModule() {
       }
 
       // 4. Create cargue record
-      setProgress({ phase: 'Creando registro de cargue...', done: 3, total: 4 });
+      setProgress({ phase: 'Creando registro de cargue...', done: 3, total: 5 });
       const cargueRecord = await db.createCargue({
         idtipocargue: selectedTipoCargue,
         idbase: selectedBase,
@@ -285,7 +454,6 @@ export function CargueModule() {
       const idcargue = cargueRecord.idcargue;
 
       // 5. Insert personas (single table, no deduplication)
-      setProgress({ phase: `Insertando ${totalRows} registros...`, done: 3, total: 4 });
       const personaRowsWithCargue = personaRows.map(p => ({
         ...p,
         idcargue,
@@ -293,7 +461,9 @@ export function CargueModule() {
         estado: 'activo',
       }));
 
-      await db.batchInsertPersonas(personaRowsWithCargue);
+      await db.batchInsertPersonas(personaRowsWithCargue, 50, (done, total) => {
+        setProgress({ phase: `Insertando ${done} de ${total} registros...`, done, total });
+      });
 
       // 6. Inactivate previous cargues of same tipo
       setProgress({ phase: 'Actualizando estado de cargues...', done: 4, total: 4 });
@@ -555,6 +725,86 @@ export function CargueModule() {
           </div>
         )}
       </CardContent>
+
+      {/* Validation Dialog */}
+      <Dialog open={showValidationDialog} onOpenChange={setShowValidationDialog}>
+        <DialogContent className="text-xs !max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader className={validationErrors.length > 0
+            ? 'bg-red-50 -mx-6 -mt-6 px-4 py-2 rounded-t-lg border-b border-red-200'
+            : 'bg-yellow-50 -mx-6 -mt-6 px-4 py-2 rounded-t-lg border-b border-yellow-200'
+          }>
+            <DialogTitle className="flex items-center gap-2">
+              {validationErrors.length > 0 ? (
+                <><XCircle className="w-5 h-5 text-red-600" /> Errores de validación</>
+              ) : (
+                <><AlertTriangle className="w-5 h-5 text-yellow-600" /> Advertencias de validación</>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {validationErrors.length > 0
+                ? 'Se encontraron errores que impiden continuar con el cargue.'
+                : 'Se encontraron advertencias. Puede continuar o cancelar.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-2">
+            {validationErrors.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-red-700 mb-1">Errores ({validationErrors.length}):</h4>
+                <ul className="space-y-1">
+                  {validationErrors.map((err, i) => (
+                    <li key={i} className="flex items-start gap-2 text-red-600">
+                      <XCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                      <span>{err}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {validationWarnings.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-yellow-700 mb-1">Advertencias ({validationWarnings.length}):</h4>
+                <ul className="space-y-1">
+                  {validationWarnings.map((warn, i) => (
+                    <li key={i} className="flex items-start gap-2 text-yellow-700">
+                      <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                      <span>{warn}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-3 border-t border-gray-200">
+            {validationCanProceed ? (
+              <>
+                <Button onClick={handleContinueUpload} className="flex-1 !h-7">
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                  Continuar
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowValidationDialog(false);
+                    setPendingUploadData(null);
+                  }}
+                  className="flex-1 !h-7 bg-black hover:bg-gray-800 text-white"
+                >
+                  Cancelar
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => setShowValidationDialog(false)}
+                className="flex-1 !h-7"
+              >
+                Cerrar
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

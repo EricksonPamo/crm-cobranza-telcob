@@ -90,7 +90,7 @@ interface DatabaseContextType {
   inactivateCarguesByTipoCargue: (idbase: string, idtipocargue: string, excludeIdcargue: number, idusuariomod: string) => Promise<void>;
   updateBaseCargueGestionar: (idbase: string, idcarguegestionar: number | null, idusuariomod: string) => Promise<void>;
   getCarguesActivosPersona: (idbase: string) => Promise<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>;
-  batchInsertPersonas: (rows: Record<string, any>[], batchSize?: number) => Promise<{ idpersona: string; identificacion: string }[]>;
+  batchInsertPersonas: (rows: Record<string, any>[], batchSize?: number, onProgress?: (done: number, total: number) => void) => Promise<void>;
   getPersonasIdByCargue: (idcargue: number) => Promise<{ idpersona: string; identificacion: string }[]>;
   getProductoHomologacionByProductoTipo: (idproducto: string, idtipocargue: string) => Promise<ProductoHomologacion[]>;
   getBasesByProducto: (idproducto: string) => Promise<Base[]>;

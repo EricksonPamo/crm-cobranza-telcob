@@ -620,20 +620,20 @@ function buildMultiRowInsert(tableName: string, columns: string[], batch: Record
   return { query: `INSERT INTO ${tableName} (${columns.join(',')}) VALUES ${valueRows.join(',')}`, params };
 }
 
-export async function batchInsertPersonas(rows: Record<string, any>[], batchSize = 500): Promise<{ idpersona: string; identificacion: string }[]> {
+export async function batchInsertPersonas(
+  rows: Record<string, any>[],
+  batchSize = 50,
+  onProgress?: (done: number, total: number) => void
+): Promise<void> {
   const db = ensureConnection();
-  if (rows.length === 0) return [];
+  if (rows.length === 0) return;
 
-  const allResults: { idpersona: string; identificacion: string }[] = [];
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
     const { query, params } = buildMultiRowInsert('personas', PERSONAS_COLUMNS, batch);
-    const results = await db.query<{ idpersona: string; identificacion: string }[]>(
-      query + ' RETURNING idpersona, identificacion', params
-    );
-    allResults.push(...results);
+    await db.query(query, params);
+    onProgress?.(Math.min(i + batchSize, rows.length), rows.length);
   }
-  return allResults;
 }
 
 export async function getPersonasIdByCargue(idcargue: number) {
