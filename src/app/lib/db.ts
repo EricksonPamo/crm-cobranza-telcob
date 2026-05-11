@@ -622,7 +622,7 @@ function buildMultiRowInsert(tableName: string, columns: string[], batch: Record
 
 export async function batchInsertPersonas(
   rows: Record<string, any>[],
-  batchSize = 100,
+  batchSize = 200,
   onProgress?: (done: number, total: number) => void
 ): Promise<void> {
   const db = ensureConnection();
