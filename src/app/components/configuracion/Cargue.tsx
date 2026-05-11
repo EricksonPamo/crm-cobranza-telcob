@@ -52,10 +52,10 @@ export function CargueModule() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [validationCanProceed, setValidationCanProceed] = useState(false);
+  const [validationSummary, setValidationSummary] = useState({ matched: 0, total: 0, totalRows: 0, emptyRows: 0 });
   const [pendingUploadData, setPendingUploadData] = useState<{
     csvRows: string[][];
     homologacion: ProductoHomologacion[];
-    totalRows: number;
   } | null>(null);
 
   // Pagination
@@ -161,6 +161,7 @@ export function CargueModule() {
     errors: string[];
     warnings: string[];
     canProceed: boolean;
+    summary: { matched: number; total: number; totalRows: number; emptyRows: number };
   }
 
   const normalize = (s: string) =>
@@ -175,56 +176,56 @@ export function CargueModule() {
 
     if (csvRows.length < 2) {
       errors.push('El archivo no contiene filas de datos (solo encabezados o vacío).');
-      return { errors, warnings, canProceed: false };
+      return { errors, warnings, canProceed: false, summary: { matched: 0, total: 0, totalRows: 0, emptyRows: 0 } };
     }
 
     const csvHeaders = csvRows[0];
-    const csvHeadersNorm = csvHeaders.map(normalize);
     const headerMap = new Map<string, number>();
     csvHeaders.forEach((h, i) => headerMap.set(normalize(h), i));
     const dataRows = csvRows.slice(1);
 
+    const fieldsWithOrigen = homologacion.filter(c => c.nombreCampoOrigen);
+    let matched = 0;
+
     // 1. Campos obligatorios sin columna en CSV
-    for (const campo of homologacion) {
-      if (campo.obligatorio && campo.nombreCampoOrigen) {
-        if (!headerMap.has(normalize(campo.nombreCampoOrigen))) {
-          errors.push(`Campo obligatorio "${campo.nombreCampoOrigen}" → ${campo.nombreColumna} no encontrado en el archivo.`);
-        }
+    for (const campo of fieldsWithOrigen) {
+      const found = headerMap.has(normalize(campo.nombreCampoOrigen!));
+      if (found) {
+        matched++;
+      } else if (campo.obligatorio) {
+        errors.push(`Campo obligatorio "${campo.nombreCampoOrigen}" → ${campo.nombreColumna} no encontrado en el archivo.`);
+      } else {
+        warnings.push(`Campo "${campo.nombreCampoOrigen}" → ${campo.nombreColumna} no encontrado en el archivo.`);
       }
     }
 
-    // 2. Campos no obligatorios sin match
-    for (const campo of homologacion) {
-      if (!campo.obligatorio && campo.nombreCampoOrigen) {
-        if (!headerMap.has(normalize(campo.nombreCampoOrigen))) {
-          warnings.push(`Campo "${campo.nombreCampoOrigen}" → ${campo.nombreColumna} no encontrado en el archivo.`);
-        }
-      }
-    }
-
-    // 3. Columnas del CSV no mapeadas en la plantilla
-    const plantillaHeaders = new Set(
-      homologacion.filter(c => c.nombreCampoOrigen).map(c => normalize(c.nombreCampoOrigen!))
-    );
+    // 2. Columnas del CSV no mapeadas en la plantilla
+    const plantillaHeaders = new Set(fieldsWithOrigen.map(c => normalize(c.nombreCampoOrigen!)));
     for (const header of csvHeaders) {
       if (!plantillaHeaders.has(normalize(header))) {
         warnings.push(`Columna "${header}" del archivo no está en la plantilla.`);
       }
     }
 
-    // 4. Filas sin identificación
+    // 3. Filas sin identificación
     const identField = homologacion.find(c => c.nombreColumna.toLowerCase() === 'identificacion');
+    let emptyRows = 0;
     if (identField?.nombreCampoOrigen) {
       const idx = headerMap.get(normalize(identField.nombreCampoOrigen));
       if (idx !== undefined) {
-        const emptyCount = dataRows.filter(row => !row[idx] || !row[idx].trim()).length;
-        if (emptyCount > 0) {
-          warnings.push(`${emptyCount} fila(s) sin identificación serán omitidas.`);
+        emptyRows = dataRows.filter(row => !row[idx] || !row[idx].trim()).length;
+        if (emptyRows > 0) {
+          warnings.push(`${emptyRows} fila(s) sin identificación serán omitidas.`);
         }
       }
     }
 
-    return { errors, warnings, canProceed: errors.length === 0 };
+    return {
+      errors,
+      warnings,
+      canProceed: errors.length === 0,
+      summary: { matched, total: fieldsWithOrigen.length, totalRows: dataRows.length, emptyRows },
+    };
   };
 
   // ===================== MAPPING WITH PLANTILLA =====================
@@ -305,6 +306,7 @@ export function CargueModule() {
     try {
       setUploading(true);
 
+      setProgress({ phase: 'Mapeando datos...', done: 2, total: 5 });
       const { personaRows, totalRows } = mapCsvToRecords(csvRows, homologacion);
 
       if (personaRows.length === 0) {
@@ -390,20 +392,19 @@ export function CargueModule() {
       const text = await file.text();
       const csvRows = parseCSV(text);
 
-      // 3. Validate CSV against plantilla
+      // 3. Validate CSV against plantilla (always show results)
       setProgress({ phase: 'Validando archivo...', done: 2, total: 5 });
       const validation = validateCsvAgainstPlantilla(csvRows, homologacion);
 
-      if (validation.errors.length > 0 || validation.warnings.length > 0) {
-        setValidationErrors(validation.errors);
-        setValidationWarnings(validation.warnings);
-        setValidationCanProceed(validation.canProceed);
-        setPendingUploadData({ csvRows, homologacion, totalRows: 0 });
-        setShowValidationDialog(true);
-        setUploading(false);
-        setProgress({ phase: '', done: 0, total: 0 });
-        return; // User will confirm or cancel via dialog
-      }
+      setValidationErrors(validation.errors);
+      setValidationWarnings(validation.warnings);
+      setValidationCanProceed(validation.canProceed);
+      setValidationSummary(validation.summary);
+      setPendingUploadData({ csvRows, homologacion });
+      setShowValidationDialog(true);
+      setUploading(false);
+      setProgress({ phase: '', done: 0, total: 0 });
+      return; // User will confirm or cancel via dialog
 
       // 4. Map CSV to records using plantilla
       setProgress({ phase: 'Mapeando datos...', done: 2, total: 5 });
@@ -731,27 +732,53 @@ export function CargueModule() {
         <DialogContent className="text-xs !max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader className={validationErrors.length > 0
             ? 'bg-red-50 -mx-6 -mt-6 px-4 py-2 rounded-t-lg border-b border-red-200'
-            : 'bg-yellow-50 -mx-6 -mt-6 px-4 py-2 rounded-t-lg border-b border-yellow-200'
+            : validationWarnings.length > 0
+            ? 'bg-yellow-50 -mx-6 -mt-6 px-4 py-2 rounded-t-lg border-b border-yellow-200'
+            : 'bg-green-50 -mx-6 -mt-6 px-4 py-2 rounded-t-lg border-b border-green-200'
           }>
             <DialogTitle className="flex items-center gap-2">
               {validationErrors.length > 0 ? (
                 <><XCircle className="w-5 h-5 text-red-600" /> Errores de validación</>
-              ) : (
+              ) : validationWarnings.length > 0 ? (
                 <><AlertTriangle className="w-5 h-5 text-yellow-600" /> Advertencias de validación</>
+              ) : (
+                <><CheckCircle2 className="w-5 h-5 text-green-600" /> Validación exitosa</>
               )}
             </DialogTitle>
             <DialogDescription>
               {validationErrors.length > 0
                 ? 'Se encontraron errores que impiden continuar con el cargue.'
-                : 'Se encontraron advertencias. Puede continuar o cancelar.'}
+                : validationWarnings.length > 0
+                ? 'Se encontraron advertencias. Revise antes de continuar.'
+                : 'El archivo cumple con la plantilla. Puede proceder con el cargue.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 pt-2">
+            {/* Summary */}
+            <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-slate-500">Campos coincidentes:</span>{' '}
+                  <span className="font-semibold text-sky-700">{validationSummary.matched} de {validationSummary.total}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Registros a procesar:</span>{' '}
+                  <span className="font-semibold text-sky-700">{validationSummary.totalRows.toLocaleString()}</span>
+                </div>
+                {validationSummary.emptyRows > 0 && (
+                  <div className="col-span-2">
+                    <span className="text-slate-500">Filas sin identificación:</span>{' '}
+                    <span className="font-semibold text-yellow-700">{validationSummary.emptyRows.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {validationErrors.length > 0 && (
               <div>
                 <h4 className="font-semibold text-red-700 mb-1">Errores ({validationErrors.length}):</h4>
-                <ul className="space-y-1">
+                <ul className="space-y-1 max-h-40 overflow-y-auto">
                   {validationErrors.map((err, i) => (
                     <li key={i} className="flex items-start gap-2 text-red-600">
                       <XCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
@@ -765,7 +792,7 @@ export function CargueModule() {
             {validationWarnings.length > 0 && (
               <div>
                 <h4 className="font-semibold text-yellow-700 mb-1">Advertencias ({validationWarnings.length}):</h4>
-                <ul className="space-y-1">
+                <ul className="space-y-1 max-h-40 overflow-y-auto">
                   {validationWarnings.map((warn, i) => (
                     <li key={i} className="flex items-start gap-2 text-yellow-700">
                       <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
@@ -782,7 +809,7 @@ export function CargueModule() {
               <>
                 <Button onClick={handleContinueUpload} className="flex-1 !h-7">
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                  Continuar
+                  {validationWarnings.length > 0 ? 'Continuar de todas formas' : 'Confirmar cargue'}
                 </Button>
                 <Button
                   onClick={() => {
