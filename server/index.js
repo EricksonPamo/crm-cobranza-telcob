@@ -494,6 +494,25 @@ app.delete('/api/producto-homologacion/:idproducto/:idhomologacion', async (req,
 // =====================================================
 // CARGUES
 // =====================================================
+app.get('/api/cargues/by-base/:idbase', async (req, res) => {
+  try {
+    const rows = await q(
+      `SELECT c.idcargue, c.idtipocargue, c.idbase,
+              c.nombre, c.nombrearchivo, c.cantidadregistros,
+              c.fechacreacion, c.idusuario, c.fechamodificacion, c.idusuariomod, c.estado,
+              ct.nombre as "tipoCargueNombre",
+              pu.nombre_completo as "usuarioNombre"
+       FROM cargues c
+       JOIN cargue_tipo ct ON c.idtipocargue = ct.idtipocargue
+       JOIN perfiles_usuario pu ON c.idusuario = pu.id
+       WHERE c.idbase = $1
+       ORDER BY c.fechacreacion DESC`,
+      [req.params.idbase]
+    );
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
 app.get('/api/cargues/:idproducto', async (req, res) => {
   try {
     const rows = await q(
@@ -552,6 +571,21 @@ app.get('/api/cargues-activos-persona/:idbase', async (req, res) => {
       [req.params.idbase, 'activo', 'persona']
     );
     res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.put('/api/cargues/:idcargue/estado', async (req, res) => {
+  try {
+    const { estado, idusuariomod } = req.body;
+    const rows = await q(
+      `UPDATE cargues SET estado = $1, fechamodificacion = NOW(), idusuariomod = $2
+       WHERE idcargue = $3 RETURNING *`,
+      [estado, idusuariomod, req.params.idcargue]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Cargue no encontrado' });
+    }
+    res.json(rows[0]);
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 

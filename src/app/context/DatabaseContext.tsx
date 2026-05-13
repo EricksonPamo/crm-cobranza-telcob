@@ -47,6 +47,8 @@ import {
   inactivateCarguesByTipoCargue,
   updateBaseCargueGestionar,
   getCarguesActivosPersona,
+  getCarguesByBase,
+  toggleCargueEstado,
   batchInsertPersonas,
   getPersonasIdByCargue,
   getProductoHomologacionByProductoTipo,
@@ -90,6 +92,8 @@ interface DatabaseContextType {
   inactivateCarguesByTipoCargue: (idbase: string, idtipocargue: string, excludeIdcargue: number, idusuariomod: string) => Promise<void>;
   updateBaseCargueGestionar: (idbase: string, idcarguegestionar: number | null, idusuariomod: string) => Promise<void>;
   getCarguesActivosPersona: (idbase: string) => Promise<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>;
+  getCarguesByBase: (idbase: string) => Promise<Cargue[]>;
+  toggleCargueEstado: (idcargue: number, estado: string, idusuariomod: string) => Promise<Cargue>;
   batchInsertPersonas: (rows: Record<string, any>[], batchSize?: number, onProgress?: (done: number, total: number) => void) => Promise<void>;
   getPersonasIdByCargue: (idcargue: number) => Promise<{ idpersona: string; identificacion: string }[]>;
   getProductoHomologacionByProductoTipo: (idproducto: string, idtipocargue: string) => Promise<ProductoHomologacion[]>;
@@ -109,7 +113,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     getProductoHomologaciones, createProductoHomologacionBatch,
     updateProductoHomologacion, deleteProductoHomologacion,
     getCarguesByProducto, createCargue, inactivateCarguesByTipoCargue,
-    updateBaseCargueGestionar, getCarguesActivosPersona,
+    updateBaseCargueGestionar, getCarguesActivosPersona, getCarguesByBase, toggleCargueEstado,
     batchInsertPersonas,
     getPersonasIdByCargue, getProductoHomologacionByProductoTipo,
     getBasesByProducto,

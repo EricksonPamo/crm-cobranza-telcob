@@ -12,10 +12,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Switch } from '../ui/switch';
 import { Database, Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDatabase } from '../../context/DatabaseContext';
 import { useAuth } from '../../contexts/AuthContext';
+import type { Cargue } from '../../lib/db';
 
 interface FormData {
   nombre: string;
@@ -36,6 +38,9 @@ export function Base() {
   const [bases, setBases] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
   const [carguesPersona, setCarguesPersona] = useState<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>([]);
+  const [carguesBase, setCarguesBase] = useState<Cargue[]>([]);
+  const [loadingCargues, setLoadingCargues] = useState(false);
+  const [togglingCargue, setTogglingCargue] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('activo');
@@ -104,6 +109,16 @@ export function Base() {
     } catch {
       setCarguesPersona([]);
     }
+    // Load ALL cargues for the management table
+    try {
+      setLoadingCargues(true);
+      const allCargues = await db.getCarguesByBase(base.idbase);
+      setCarguesBase(allCargues);
+    } catch {
+      setCarguesBase([]);
+    } finally {
+      setLoadingCargues(false);
+    }
     setIsDialogOpen(true);
   };
 
@@ -124,7 +139,30 @@ export function Base() {
   const resetForm = () => {
     setFormData({ nombre: '', alias: '', idproducto: '', idcarguegestionar: '', maximocuotas: 1, estado: 'activo' });
     setEditingId(null);
+    setCarguesBase([]);
     setIsDialogOpen(false);
+  };
+
+  const handleToggleCargueEstado = async (idcargue: number, currentEstado: string) => {
+    const userId = requireUser();
+    const newEstado = currentEstado === 'activo' ? 'inactivo' : 'activo';
+    setTogglingCargue(idcargue);
+    try {
+      await db.toggleCargueEstado(idcargue, newEstado, userId);
+      setCarguesBase(prev => prev.map(c => c.idcargue === idcargue ? { ...c, estado: newEstado } : c));
+      if (editingId) {
+        try {
+          const cargues = await db.getCarguesActivosPersona(editingId);
+          setCarguesPersona(cargues);
+        } catch { setCarguesPersona([]); }
+      }
+      toast.success(`Cargue ${newEstado === 'activo' ? 'activado' : 'desactivado'} correctamente`);
+    } catch (error: any) {
+      console.error('Error toggling cargue estado:', error);
+      toast.error(error?.message || 'Error al cambiar estado del cargue');
+    } finally {
+      setTogglingCargue(null);
+    }
   };
 
   const handleBuscar = () => { setCriteriosAplicados({ fechaDesde, fechaHasta }); };
@@ -238,6 +276,59 @@ export function Base() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                    )}
+                    {editingId && (
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-xs font-medium text-slate-600">Cargues del Base</Label>
+                        {loadingCargues ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            <span className="text-xs text-slate-500">Cargando cargues...</span>
+                          </div>
+                        ) : carguesBase.length === 0 ? (
+                          <div className="text-xs text-slate-400 py-3 text-center border rounded-md">
+                            No hay cargues registrados para esta base
+                          </div>
+                        ) : (
+                          <div className="border rounded-md overflow-hidden max-h-[240px] overflow-y-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-gray-200">
+                                  <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Tipo</TableHead>
+                                  <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Archivo</TableHead>
+                                  <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs text-right">Registros</TableHead>
+                                  <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Fecha</TableHead>
+                                  <TableHead className="font-semibold py-0.5 text-xs text-center">Estado</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {carguesBase.map((c) => (
+                                  <TableRow key={c.idcargue} className="border-b border-gray-200">
+                                    <TableCell className="text-xs border-r border-gray-300 py-1">{c.tipoCargueNombre}</TableCell>
+                                    <TableCell className="text-xs border-r border-gray-300 py-1 max-w-[180px] truncate" title={c.nombrearchivo}>{c.nombrearchivo}</TableCell>
+                                    <TableCell className="text-xs border-r border-gray-300 py-1 text-right">{c.cantidadregistros.toLocaleString()}</TableCell>
+                                    <TableCell className="text-xs border-r border-gray-300 py-1">
+                                      {new Date(c.fechacreacion).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                    </TableCell>
+                                    <TableCell className="py-1 text-center">
+                                      <div className="flex items-center justify-center gap-1.5">
+                                        <Switch
+                                          checked={c.estado === 'activo'}
+                                          onCheckedChange={() => handleToggleCargueEstado(c.idcargue, c.estado)}
+                                          disabled={togglingCargue === c.idcargue}
+                                        />
+                                        <span className={`text-xs font-medium ${c.estado === 'activo' ? 'text-green-700' : 'text-gray-500'}`}>
+                                          {togglingCargue === c.idcargue ? '...' : c.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="space-y-1">

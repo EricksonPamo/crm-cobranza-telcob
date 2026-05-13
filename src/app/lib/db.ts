@@ -97,6 +97,7 @@ export interface Cargue {
   idcargue: number;
   idtipocargue: string;
   idbase: string;
+  nombre?: string;
   nombrearchivo: string;
   cantidadregistros: number;
   fechacreacion: string;
@@ -104,8 +105,8 @@ export interface Cargue {
   fechamodificacion: string | null;
   idusuariomod: string | null;
   estado: string;
-  productoNombre: string;
-  baseNombre: string;
+  productoNombre?: string;
+  baseNombre?: string;
   tipoCargueNombre: string;
   usuarioNombre: string;
 }
@@ -371,6 +372,14 @@ export async function updateBaseCargueGestionar(idbase: string, idcarguegestiona
 
 export async function getCarguesActivosPersona(idbase: string) {
   return apiFetch<{ idcargue: number; nombrearchivo: string; cantidadregistros: number }[]>(`/cargues-activos-persona/${idbase}`);
+}
+
+export async function getCarguesByBase(idbase: string) {
+  return apiFetch<Cargue[]>(`/cargues/by-base/${idbase}`);
+}
+
+export async function toggleCargueEstado(idcargue: number, estado: string, idusuariomod: string) {
+  return apiPut<Cargue>(`/cargues/${idcargue}/estado`, { estado, idusuariomod });
 }
 
 // =====================================================
