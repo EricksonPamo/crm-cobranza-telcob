@@ -275,7 +275,7 @@ export function CargueModule() {
   const mapCsvToRecords = (
     csvRows: string[][],
     homologacion: ProductoHomologacion[],
-  ): { personaRows: Record<string, any>[]; totalRows: number } => {
+  ): { tableRows: Record<string, Record<string, any>[]>; totalRows: number } => {
     if (csvRows.length < 2) throw new Error('El archivo CSV no tiene datos');
 
     const headers = csvRows[0];
@@ -287,8 +287,13 @@ export function CargueModule() {
     const headerMap = new Map<string, number>();
     headers.forEach((h, i) => headerMap.set(normalize(h), i));
 
-    // All homologacion fields map to personas (tabla unificada)
-    const personaFields = homologacion;
+    // Group homologacion fields by target table
+    const fieldsByTable = new Map<string, ProductoHomologacion[]>();
+    for (const field of homologacion) {
+      const tableName = field.tablaNombre?.toLowerCase() || 'personas';
+      if (!fieldsByTable.has(tableName)) fieldsByTable.set(tableName, []);
+      fieldsByTable.get(tableName)!.push(field);
+    }
 
     // Map: nombrecampoorigen -> header index (normalized)
     const mapField = (field: ProductoHomologacion): number | null => {
@@ -305,13 +310,17 @@ export function CargueModule() {
       console.warn('Campos de plantilla no encontrados en CSV:', unmatchedFields);
     }
 
-    // Pre-compute field type map for conversion
-    const dateFieldNames = new Set(
-      homologacion.filter(f => f.tipoDatoNombre === 'fecha').map(f => f.nombreColumna.toLowerCase())
-    );
-    const numericFieldNames = new Set(
-      homologacion.filter(f => f.tipoDatoNombre === 'numerico').map(f => f.nombreColumna.toLowerCase())
-    );
+    // Pre-compute field type maps per table
+    const dateFieldsByTable = new Map<string, Set<string>>();
+    const numericFieldsByTable = new Map<string, Set<string>>();
+    for (const [tableName, fields] of fieldsByTable) {
+      dateFieldsByTable.set(tableName, new Set(
+        fields.filter(f => f.tipoDatoNombre === 'fecha').map(f => f.nombreColumna.toLowerCase())
+      ));
+      numericFieldsByTable.set(tableName, new Set(
+        fields.filter(f => f.tipoDatoNombre === 'numerico').map(f => f.nombreColumna.toLowerCase())
+      ));
+    }
 
     const convertDate = (val: string): string | null => {
       if (!val || !val.trim()) return null;
@@ -328,46 +337,58 @@ export function CargueModule() {
       return isNaN(num) ? null : String(num);
     };
 
-    // Each CSV row becomes a persona record (no deduplication since obligaciones are now in persona)
-    const personaRecords: Record<string, any>[] = [];
+    // Build records grouped by table
+    const tableRows = new Map<string, Record<string, any>[]>();
+    for (const tableName of fieldsByTable.keys()) {
+      tableRows.set(tableName, []);
+    }
+
     let skippedRows = 0;
 
     for (const row of dataRows) {
       if (row.length === 0 || row.every(c => !c)) continue;
 
-      const personaRecord: Record<string, any> = {};
-      let identificacion = '';
+      for (const [tableName, fields] of fieldsByTable) {
+        const record: Record<string, any> = {};
+        let identificacion = '';
+        const dateFields = dateFieldsByTable.get(tableName) || new Set();
+        const numericFields = numericFieldsByTable.get(tableName) || new Set();
 
-      for (const field of personaFields) {
-        const csvIdx = mapField(field);
-        const rawValue = csvIdx !== null && csvIdx < row.length ? row[csvIdx] : '';
-        const colName = field.nombreColumna.toLowerCase();
+        for (const field of fields) {
+          const csvIdx = mapField(field);
+          const rawValue = csvIdx !== null && csvIdx < row.length ? row[csvIdx] : '';
+          const colName = field.nombreColumna.toLowerCase();
 
-        let value: string | null = rawValue || null;
+          let value: string | null = rawValue || null;
 
-        if (value && dateFieldNames.has(colName)) {
-          value = convertDate(value);
-        } else if (value && numericFieldNames.has(colName)) {
-          value = convertNumeric(value);
+          if (value && dateFields.has(colName)) {
+            value = convertDate(value);
+          } else if (value && numericFields.has(colName)) {
+            value = convertNumeric(value);
+          }
+
+          record[colName] = value;
+          if (colName === 'identificacion') identificacion = rawValue;
         }
 
-        personaRecord[colName] = value;
-        if (colName === 'identificacion') identificacion = rawValue;
+        if (!identificacion) { skippedRows++; continue; }
+
+        tableRows.get(tableName)!.push(record);
       }
-
-      if (!identificacion) { skippedRows++; continue; }
-
-      personaRecords.push(personaRecord);
     }
 
     if (skippedRows > 0) {
       console.warn(`${skippedRows} filas sin identificación fueron omitidas`);
     }
 
-    return {
-      personaRows: personaRecords,
-      totalRows: personaRecords.length,
-    };
+    const result: Record<string, Record<string, any>[]> = {};
+    let totalRows = 0;
+    for (const [tableName, rows] of tableRows) {
+      result[tableName] = rows;
+      totalRows += rows.length;
+    }
+
+    return { tableRows: result, totalRows };
   };
 
   // ===================== CONTINUE UPLOAD AFTER VALIDATION =====================
@@ -382,9 +403,9 @@ export function CargueModule() {
       setUploading(true);
 
       setProgress({ phase: 'Mapeando datos...', done: 2, total: 5 });
-      const { personaRows, totalRows } = mapCsvToRecords(csvRows, homologacion);
+      const { tableRows, totalRows } = mapCsvToRecords(csvRows, homologacion);
 
-      if (personaRows.length === 0) {
+      if (totalRows === 0) {
         toast.error('No se encontraron registros válidos después de la validación.');
         setUploading(false);
         setProgress({ phase: '', done: 0, total: 0 });
@@ -403,16 +424,33 @@ export function CargueModule() {
       });
       const idcargue = cargueRecord.idcargue;
 
-      const personaRowsWithCargue = personaRows.map(p => ({
-        ...p,
-        idcargue,
-        idusuario: userId,
-        estado: 'activo',
-      }));
+      // Insert into each target table
+      const tableLabels: Record<string, string> = { personas: 'personas', pagos: 'pagos', campanas: 'campañas' };
 
-      await db.batchInsertPersonas(personaRowsWithCargue, 200, (done, total) => {
-        setProgress({ phase: `Insertando ${done} de ${total} registros...`, done, total });
-      });
+      for (const [tableName, rows] of Object.entries(tableRows)) {
+        if (rows.length === 0) continue;
+
+        const rowsWithCargue = rows.map(r => ({
+          ...r,
+          idcargue,
+          idusuario: userId,
+          estado: 'activo',
+        }));
+
+        if (tableName === 'personas') {
+          await db.batchInsertPersonas(rowsWithCargue, 200, (done, total) => {
+            setProgress({ phase: `Insertando ${done} de ${total} registros en personas...`, done, total });
+          });
+        } else if (tableName === 'pagos') {
+          await db.batchInsertPagos(rowsWithCargue, 200, (done, total) => {
+            setProgress({ phase: `Insertando ${done} de ${total} registros en pagos...`, done, total });
+          });
+        } else if (tableName === 'campanas') {
+          await db.batchInsertCampanas(rowsWithCargue, 200, (done, total) => {
+            setProgress({ phase: `Insertando ${done} de ${total} registros en campañas...`, done, total });
+          });
+        }
+      }
 
       setProgress({ phase: 'Actualizando estado de cargues...', done: 4, total: 5 });
       await db.inactivateCarguesByTipoCargue(selectedBase, selectedTipoCargue, idcargue, userId);
@@ -423,7 +461,12 @@ export function CargueModule() {
       }
 
       setProgress({ phase: 'Completado', done: 5, total: 5 });
-      toast.success(`Cargue completado: ${totalRows} registros en personas`);
+
+      // Build table-specific success message
+      const parts = Object.entries(tableRows)
+        .filter(([, rows]) => rows.length > 0)
+        .map(([table, rows]) => `${rows.length} registros en ${tableLabels[table] || table}`);
+      toast.success(`Cargue completado: ${parts.join(', ')}`);
 
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -480,88 +523,6 @@ export function CargueModule() {
       setUploading(false);
       setProgress({ phase: '', done: 0, total: 0 });
       return; // User will confirm or cancel via dialog
-
-      // 4. Map CSV to records using plantilla
-      setProgress({ phase: 'Mapeando datos...', done: 2, total: 5 });
-      const { personaRows, totalRows } = mapCsvToRecords(csvRows, homologacion);
-
-      if (personaRows.length === 0) {
-        // Build diagnostic info
-        const csvHeaders = csvRows[0];
-        const expectedFields = homologacion
-          .map(h => h.nombreCampoOrigen)
-          .filter(Boolean);
-        const normalize = (s: string) =>
-          s.toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '');
-        const csvHeadersNorm = csvHeaders.map(normalize);
-        const matchedHeaders = expectedFields.filter((f: string) => csvHeadersNorm.includes(normalize(f)));
-        const unmatchedHeaders = expectedFields.filter((f: string) => !csvHeadersNorm.includes(normalize(f)));
-
-        let errorMsg = 'No se encontraron registros válidos en el archivo.';
-        if (expectedFields.length === 0) {
-          errorMsg += '\nNo hay campos configurados en la plantilla.';
-        } else if (matchedHeaders.length === 0) {
-          errorMsg += `\nEncabezados del CSV: ${csvHeaders.join(', ')}`;
-          errorMsg += `\nCampos esperados: ${expectedFields.join(', ')}`;
-          errorMsg += '\nVerifique que los encabezados del CSV coincidan con los campos origen de la plantilla.';
-        } else {
-          errorMsg += `\nSe encontraron ${matchedHeaders.length} de ${expectedFields.length} campos, pero ningún registro tiene identificación.`;
-          if (unmatchedHeaders.length > 0) {
-            errorMsg += `\nCampos no encontrados en CSV: ${unmatchedHeaders.join(', ')}`;
-          }
-        }
-        toast.error(errorMsg, { duration: 8000 });
-        setUploading(false);
-        setProgress({ phase: '', done: 0, total: 0 });
-        return;
-      }
-
-      // 4. Create cargue record
-      setProgress({ phase: 'Creando registro de cargue...', done: 3, total: 5 });
-      const cargueRecord = await db.createCargue({
-        idtipocargue: selectedTipoCargue,
-        idbase: selectedBase,
-        nombrearchivo: file.name,
-        cantidadregistros: totalRows,
-        idusuario: userId,
-        idusuariomod: userId,
-        estado: 'activo',
-      });
-      const idcargue = cargueRecord.idcargue;
-
-      // 5. Insert personas (single table, no deduplication)
-      const personaRowsWithCargue = personaRows.map(p => ({
-        ...p,
-        idcargue,
-        idusuario: userId,
-        estado: 'activo',
-      }));
-
-      await db.batchInsertPersonas(personaRowsWithCargue, 200, (done, total) => {
-        setProgress({ phase: `Insertando ${done} de ${total} registros...`, done, total });
-      });
-
-      // 6. Inactivate previous cargues of same tipo
-      setProgress({ phase: 'Actualizando estado de cargues...', done: 4, total: 4 });
-      await db.inactivateCarguesByTipoCargue(selectedBase, selectedTipoCargue, idcargue, userId);
-
-      // 7. Update idcarguegestionar if tipo is "persona"
-      const tipoCargueNombre = cargueTipos.find(ct => ct.idtipocargue === selectedTipoCargue)?.nombre?.toLowerCase();
-      if (tipoCargueNombre === 'persona') {
-        await db.updateBaseCargueGestionar(selectedBase, idcargue, userId);
-      }
-
-      // 8. Done
-      setProgress({ phase: 'Completado', done: 4, total: 4 });
-      toast.success(`Cargue completado: ${totalRows} registros en personas`);
-
-      // Reset
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-
-      // Refresh cargues table
-      const updatedCargues = await db.getCarguesByProducto(selectedProducto);
-      setCargues(updatedCargues);
     } catch (error: any) {
       console.error('Error en cargue:', error);
       toast.error(error?.message || 'Error al procesar el cargue');

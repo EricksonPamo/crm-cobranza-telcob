@@ -50,7 +50,11 @@ import {
   getCarguesByBase,
   toggleCargueEstado,
   batchInsertPersonas,
+  batchInsertPagos,
+  batchInsertCampanas,
   getPersonasIdByCargue,
+  getPagosIdByCargue,
+  getCampanasIdByCargue,
   getProductoHomologacionByProductoTipo,
   getBasesByProducto,
 } from '../lib/db';
@@ -95,7 +99,11 @@ interface DatabaseContextType {
   getCarguesByBase: (idbase: string) => Promise<Cargue[]>;
   toggleCargueEstado: (idcargue: number, estado: string, idusuariomod: string) => Promise<Cargue>;
   batchInsertPersonas: (rows: Record<string, any>[], batchSize?: number, onProgress?: (done: number, total: number) => void) => Promise<void>;
+  batchInsertPagos: (rows: Record<string, any>[], batchSize?: number, onProgress?: (done: number, total: number) => void) => Promise<void>;
+  batchInsertCampanas: (rows: Record<string, any>[], batchSize?: number, onProgress?: (done: number, total: number) => void) => Promise<void>;
   getPersonasIdByCargue: (idcargue: number) => Promise<{ idpersona: string; identificacion: string }[]>;
+  getPagosIdByCargue: (idcargue: number) => Promise<{ idpago: string; identificacion: string }[]>;
+  getCampanasIdByCargue: (idcargue: number) => Promise<{ idcampana: string; identificacion: string }[]>;
   getProductoHomologacionByProductoTipo: (idproducto: string, idtipocargue: string) => Promise<ProductoHomologacion[]>;
   getBasesByProducto: (idproducto: string) => Promise<Base[]>;
 }
@@ -114,8 +122,9 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     updateProductoHomologacion, deleteProductoHomologacion,
     getCarguesByProducto, createCargue, inactivateCarguesByTipoCargue,
     updateBaseCargueGestionar, getCarguesActivosPersona, getCarguesByBase, toggleCargueEstado,
-    batchInsertPersonas,
-    getPersonasIdByCargue, getProductoHomologacionByProductoTipo,
+    batchInsertPersonas, batchInsertPagos, batchInsertCampanas,
+    getPersonasIdByCargue, getPagosIdByCargue, getCampanasIdByCargue,
+    getProductoHomologacionByProductoTipo,
     getBasesByProducto,
   };
 

@@ -409,6 +409,52 @@ export async function getPersonasIdByCargue(idcargue: number) {
   return apiFetch<{ idpersona: string; identificacion: string }[]>(`/personas/by-cargue/${idcargue}`);
 }
 
+export async function batchInsertPagos(
+  rows: Record<string, any>[],
+  batchSize = 200,
+  onProgress?: (done: number, total: number) => void
+): Promise<void> {
+  if (rows.length === 0) return;
+
+  const chunkSize = 5000;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    await apiPost<{ success: boolean; inserted: number }>('/pagos/batch', {
+      rows: chunk,
+      batchSize,
+    });
+    const inserted = Math.min(i + chunkSize, rows.length);
+    onProgress?.(inserted, rows.length);
+  }
+}
+
+export async function batchInsertCampanas(
+  rows: Record<string, any>[],
+  batchSize = 200,
+  onProgress?: (done: number, total: number) => void
+): Promise<void> {
+  if (rows.length === 0) return;
+
+  const chunkSize = 5000;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    await apiPost<{ success: boolean; inserted: number }>('/campanas/batch', {
+      rows: chunk,
+      batchSize,
+    });
+    const inserted = Math.min(i + chunkSize, rows.length);
+    onProgress?.(inserted, rows.length);
+  }
+}
+
+export async function getPagosIdByCargue(idcargue: number) {
+  return apiFetch<{ idpago: string; identificacion: string }[]>(`/pagos/by-cargue/${idcargue}`);
+}
+
+export async function getCampanasIdByCargue(idcargue: number) {
+  return apiFetch<{ idcampana: string; identificacion: string }[]>(`/campanas/by-cargue/${idcargue}`);
+}
+
 export async function getBasesByProducto(idproducto: string) {
   return apiFetch<Base[]>(`/bases/producto/${idproducto}`);
 }

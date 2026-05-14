@@ -13,7 +13,8 @@ import {
 } from '../ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Switch } from '../ui/switch';
-import { Database, Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Database, Plus, Pencil, Trash2, Search, ChevronLeft, ChevronRight, Loader2, Users, CreditCard, Megaphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDatabase } from '../../context/DatabaseContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,6 +42,9 @@ export function Base() {
   const [carguesBase, setCarguesBase] = useState<Cargue[]>([]);
   const [loadingCargues, setLoadingCargues] = useState(false);
   const [togglingCargue, setTogglingCargue] = useState<number | null>(null);
+  const [carguesPage, setCarguesPage] = useState(1);
+  const [carguesTab, setCarguesTab] = useState('persona');
+  const carguesPerPage = 10;
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState<string>('activo');
@@ -97,6 +101,8 @@ export function Base() {
   };
 
   const handleEdit = async (base: any) => {
+    setCarguesPage(1);
+    setCarguesTab('persona');
     setEditingId(base.idbase);
     setFormData({
       nombre: base.nombre || '', alias: base.alias || '', idproducto: base.idproducto || '',
@@ -140,6 +146,8 @@ export function Base() {
     setFormData({ nombre: '', alias: '', idproducto: '', idcarguegestionar: '', maximocuotas: 1, estado: 'activo' });
     setEditingId(null);
     setCarguesBase([]);
+    setCarguesPage(1);
+    setCarguesTab('persona');
     setIsDialogOpen(false);
   };
 
@@ -260,10 +268,10 @@ export function Base() {
                       <Input type="number" min="1" value={formData.maximocuotas} onChange={(e) => setFormData({...formData, maximocuotas: parseInt(e.target.value)})} className="h-7 text-xs border-slate-200 focus:border-sky-300 w-[10ch]" required />
                     </div>
                     {editingId && (
-                      <div className="space-y-1 col-span-2">
+                      <div className="space-y-1">
                         <Label className="text-xs font-medium text-slate-600">Cargue a Gestionar (Obligación)</Label>
                         <Select value={formData.idcarguegestionar ? String(formData.idcarguegestionar) : ''} onValueChange={(v) => setFormData({...formData, idcarguegestionar: v === '' ? '' : v})}>
-                          <SelectTrigger className="!h-7 !py-0.5 text-xs border-sky-500 focus:border-sky-600 w-[45ch]">
+                          <SelectTrigger className="!h-7 !py-0.5 text-xs border-sky-500 focus:border-sky-600 w-1/2">
                             <SelectValue placeholder="Seleccione cargue de obligación activo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -271,64 +279,11 @@ export function Base() {
                               <div className="p-2 text-xs text-slate-400">No hay cargues de obligación activos</div>
                             ) : carguesPersona.map((c) => (
                               <SelectItem key={c.idcargue} value={String(c.idcargue)}>
-                                #{c.idcargue} - {c.nombrearchivo} ({c.cantidadregistros.toLocaleString()} reg.)
+                                #{c.idcargue} ({c.cantidadregistros.toLocaleString()} reg.)
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                    )}
-                    {editingId && (
-                      <div className="space-y-1 col-span-2">
-                        <Label className="text-xs font-medium text-slate-600">Cargues del Base</Label>
-                        {loadingCargues ? (
-                          <div className="flex items-center justify-center py-4">
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            <span className="text-xs text-slate-500">Cargando cargues...</span>
-                          </div>
-                        ) : carguesBase.length === 0 ? (
-                          <div className="text-xs text-slate-400 py-3 text-center border rounded-md">
-                            No hay cargues registrados para esta base
-                          </div>
-                        ) : (
-                          <div className="border rounded-md overflow-hidden max-h-[240px] overflow-y-auto">
-                            <Table>
-                              <TableHeader>
-                                <TableRow className="bg-gray-200">
-                                  <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Tipo</TableHead>
-                                  <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Archivo</TableHead>
-                                  <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs text-right">Registros</TableHead>
-                                  <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Fecha</TableHead>
-                                  <TableHead className="font-semibold py-0.5 text-xs text-center">Estado</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {carguesBase.map((c) => (
-                                  <TableRow key={c.idcargue} className="border-b border-gray-200">
-                                    <TableCell className="text-xs border-r border-gray-300 py-1">{c.tipoCargueNombre}</TableCell>
-                                    <TableCell className="text-xs border-r border-gray-300 py-1 max-w-[180px] truncate" title={c.nombrearchivo}>{c.nombrearchivo}</TableCell>
-                                    <TableCell className="text-xs border-r border-gray-300 py-1 text-right">{c.cantidadregistros.toLocaleString()}</TableCell>
-                                    <TableCell className="text-xs border-r border-gray-300 py-1">
-                                      {new Date(c.fechacreacion).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                    </TableCell>
-                                    <TableCell className="py-1 text-center">
-                                      <div className="flex items-center justify-center gap-1.5">
-                                        <Switch
-                                          checked={c.estado === 'activo'}
-                                          onCheckedChange={() => handleToggleCargueEstado(c.idcargue, c.estado)}
-                                          disabled={togglingCargue === c.idcargue}
-                                        />
-                                        <span className={`text-xs font-medium ${c.estado === 'activo' ? 'text-green-700' : 'text-gray-500'}`}>
-                                          {togglingCargue === c.idcargue ? '...' : c.estado === 'activo' ? 'Activo' : 'Inactivo'}
-                                        </span>
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
                       </div>
                     )}
                     <div className="space-y-1">
@@ -351,6 +306,99 @@ export function Base() {
                     <Button type="submit" className="!h-7 bg-black hover:bg-gray-800 text-white px-8 text-xs">{editingId ? 'Actualizar' : 'Crear Base'}</Button>
                     <Button type="button" variant="outline" onClick={resetForm} className="!h-7 px-8 text-xs border-slate-200">Cancelar</Button>
                   </div>
+                  {editingId && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-slate-600">Cargues del Base</Label>
+                      {loadingCargues ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          <span className="text-xs text-slate-500">Cargando cargues...</span>
+                        </div>
+                      ) : carguesBase.length === 0 ? (
+                        <div className="text-xs text-slate-400 py-3 text-center border rounded-md">
+                          No hay cargues registrados para esta base
+                        </div>
+                      ) : (() => {
+                        const filterByTab = (tipo: string) => carguesBase.filter(c => c.tipoCargueNombre?.toLowerCase() === tipo);
+                        const personaCargues = filterByTab('personas');
+                        const pagosCargues = filterByTab('pagos');
+                        const campanaCargues = filterByTab('campañas');
+                        const renderCargueTable = (items: Cargue[]) => {
+                          const totalPages = Math.ceil(items.length / carguesPerPage) || 1;
+                          const start = (carguesPage - 1) * carguesPerPage;
+                          const paginated = items.slice(start, start + carguesPerPage);
+                          if (items.length === 0) {
+                            return <div className="text-xs text-slate-400 py-3 text-center border rounded-md">No hay cargues de este tipo</div>;
+                          }
+                          return (
+                            <>
+                              <div className="border rounded-md overflow-hidden">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow className="bg-gray-200">
+                                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">ID</TableHead>
+                                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Archivo</TableHead>
+                                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs text-right">Registros</TableHead>
+                                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Fecha</TableHead>
+                                      <TableHead className="font-semibold border-r border-gray-300 py-0.5 text-xs">Usuario</TableHead>
+                                      <TableHead className="font-semibold py-0.5 text-xs text-center">Estado</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {paginated.map((c) => (
+                                      <TableRow key={c.idcargue} className="border-b border-gray-200">
+                                        <TableCell className="text-xs border-r border-gray-300 py-1">{c.idcargue}</TableCell>
+                                        <TableCell className="text-xs border-r border-gray-300 py-1 max-w-[180px] truncate" title={c.nombrearchivo}>{c.nombrearchivo}</TableCell>
+                                        <TableCell className="text-xs border-r border-gray-300 py-1 text-right">{c.cantidadregistros.toLocaleString()}</TableCell>
+                                        <TableCell className="text-xs border-r border-gray-300 py-1">
+                                          {new Date(c.fechacreacion).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                        </TableCell>
+                                        <TableCell className="text-xs border-r border-gray-300 py-1">{c.usuarioNombre}</TableCell>
+                                        <TableCell className="py-1 text-center">
+                                          <div className="flex items-center justify-center gap-1.5">
+                                            <Switch
+                                              checked={c.estado === 'activo'}
+                                              onCheckedChange={() => handleToggleCargueEstado(c.idcargue, c.estado)}
+                                              disabled={togglingCargue === c.idcargue}
+                                            />
+                                            <span className={`text-xs font-medium ${c.estado === 'activo' ? 'text-green-700' : 'text-gray-500'}`}>
+                                              {togglingCargue === c.idcargue ? '...' : c.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                          </div>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                              {items.length > 0 && (
+                                <div className="flex items-center justify-between mt-1">
+                                  <p className="text-xs text-gray-600">{start + 1} a {Math.min(start + carguesPerPage, items.length)} de {items.length} registros</p>
+                                  <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => setCarguesPage(p => p - 1)} disabled={carguesPage === 1}><ChevronLeft className="w-3 h-3" /></Button>
+                                    <span className="text-xs">Página {carguesPage} de {totalPages}</span>
+                                    <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => setCarguesPage(p => p + 1)} disabled={carguesPage === totalPages}><ChevronRight className="w-3 h-3" /></Button>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          );
+                        };
+                        return (
+                          <Tabs value={carguesTab} onValueChange={(v) => { setCarguesTab(v); setCarguesPage(1); }}>
+                            <TabsList className="h-9 bg-slate-100 p-1 gap-1">
+                              <TabsTrigger value="persona" className="text-xs px-3 h-7 gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm"><Users className="w-3.5 h-3.5" />Persona ({personaCargues.length})</TabsTrigger>
+                              <TabsTrigger value="pagos" className="text-xs px-3 h-7 gap-1.5 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm"><CreditCard className="w-3.5 h-3.5" />Pagos ({pagosCargues.length})</TabsTrigger>
+                              <TabsTrigger value="campaña" className="text-xs px-3 h-7 gap-1.5 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-sm"><Megaphone className="w-3.5 h-3.5" />Campaña ({campanaCargues.length})</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="persona" className="mt-2 space-y-1.5">{renderCargueTable(personaCargues)}</TabsContent>
+                            <TabsContent value="pagos" className="mt-2 space-y-1.5">{renderCargueTable(pagosCargues)}</TabsContent>
+                            <TabsContent value="campaña" className="mt-2 space-y-1.5">{renderCargueTable(campanaCargues)}</TabsContent>
+                          </Tabs>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </form>
               </DialogContent>
             </Dialog>

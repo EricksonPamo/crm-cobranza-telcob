@@ -616,12 +616,30 @@ const PERSONAS_COLUMNS = [
   'idusuario', 'estado',
 ];
 
-function buildMultiRowInsert(batch) {
+const PAGOS_COLUMNS = [
+  'idcargue', 'identificacion', 'cuenta', 'producto', 'subproducto',
+  'fechapago', 'moneda', 'montopago',
+  'pagodatotexto1', 'pagodatotexto2', 'pagodatotexto3', 'pagodatotexto4', 'pagodatotexto5',
+  'pagodatotexto6', 'pagodatotexto7', 'pagodatotexto8', 'pagodatotexto9', 'pagodatotexto10',
+  'pagodatonumerico1', 'pagodatonumerico2', 'pagodatonumerico3', 'pagodatonumerico4', 'pagodatonumerico5',
+  'pagodatofecha1', 'pagodatofecha2', 'pagodatofecha3', 'pagodatofecha4', 'pagodatofecha5',
+  'idusuario', 'estado',
+];
+
+const CAMPANAS_COLUMNS = [
+  'idcargue', 'identificacion', 'cuenta', 'porcentaje', 'montocampana', 'detalle',
+  'campanadatotexto1', 'campanadatotexto2', 'campanadatotexto3', 'campanadatotexto4', 'campanadatotexto5',
+  'campanadatonumerico1', 'campanadatonumerico2', 'campanadatonumerico3', 'campanadatonumerico4', 'campanadatonumerico5',
+  'campanadatofecha1', 'campanadatofecha2', 'campanadatofecha3', 'campanadatofecha4', 'campanadatofecha5',
+  'idusuario', 'estado',
+];
+
+function buildMultiRowInsert(batch, tableName, columns) {
   const params = [];
   const valueRows = [];
   for (const row of batch) {
     const rowPlaceholders = [];
-    for (const col of PERSONAS_COLUMNS) {
+    for (const col of columns) {
       const paramIdx = params.length + 1;
       const val = row[col];
       params.push((val === undefined || val === null || val === '') ? null : val);
@@ -630,7 +648,7 @@ function buildMultiRowInsert(batch) {
     valueRows.push(`(${rowPlaceholders.join(',')})`);
   }
   return {
-    query: `INSERT INTO personas (${PERSONAS_COLUMNS.join(',')}) VALUES ${valueRows.join(',')}`,
+    query: `INSERT INTO ${tableName} (${columns.join(',')}) VALUES ${valueRows.join(',')}`,
     params,
   };
 }
@@ -652,7 +670,7 @@ app.post('/api/personas/batch', async (req, res) => {
     for (let i = 0; i < batches.length; i += concurrency) {
       const chunk = batches.slice(i, i + concurrency);
       await Promise.all(chunk.map(async (batch) => {
-        const { query, params } = buildMultiRowInsert(batch);
+        const { query, params } = buildMultiRowInsert(batch, 'personas', PERSONAS_COLUMNS);
         await pool.query(query, params);
         inserted += batch.length;
       }));
@@ -669,6 +687,92 @@ app.get('/api/personas/by-cargue/:idcargue', async (req, res) => {
   try {
     const rows = await q(
       'SELECT idpersona, identificacion FROM personas WHERE idcargue = $1',
+      [req.params.idcargue]
+    );
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// PAGOS - BATCH INSERT
+// =====================================================
+app.post('/api/pagos/batch', async (req, res) => {
+  try {
+    const { rows, batchSize = 200 } = req.body;
+    if (!rows || rows.length === 0) {
+      return res.json({ success: true, inserted: 0 });
+    }
+
+    const concurrency = 8;
+    const batches = [];
+    for (let i = 0; i < rows.length; i += batchSize) {
+      batches.push(rows.slice(i, i + batchSize));
+    }
+
+    let inserted = 0;
+    for (let i = 0; i < batches.length; i += concurrency) {
+      const chunk = batches.slice(i, i + concurrency);
+      await Promise.all(chunk.map(async (batch) => {
+        const { query, params } = buildMultiRowInsert(batch, 'pagos', PAGOS_COLUMNS);
+        await pool.query(query, params);
+        inserted += batch.length;
+      }));
+    }
+
+    res.json({ success: true, inserted });
+  } catch (error) {
+    console.error('Pagos batch insert error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/pagos/by-cargue/:idcargue', async (req, res) => {
+  try {
+    const rows = await q(
+      'SELECT idpago, identificacion FROM pagos WHERE idcargue = $1',
+      [req.params.idcargue]
+    );
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// CAMPANAS - BATCH INSERT
+// =====================================================
+app.post('/api/campanas/batch', async (req, res) => {
+  try {
+    const { rows, batchSize = 200 } = req.body;
+    if (!rows || rows.length === 0) {
+      return res.json({ success: true, inserted: 0 });
+    }
+
+    const concurrency = 8;
+    const batches = [];
+    for (let i = 0; i < rows.length; i += batchSize) {
+      batches.push(rows.slice(i, i + batchSize));
+    }
+
+    let inserted = 0;
+    for (let i = 0; i < batches.length; i += concurrency) {
+      const chunk = batches.slice(i, i + concurrency);
+      await Promise.all(chunk.map(async (batch) => {
+        const { query, params } = buildMultiRowInsert(batch, 'campanas', CAMPANAS_COLUMNS);
+        await pool.query(query, params);
+        inserted += batch.length;
+      }));
+    }
+
+    res.json({ success: true, inserted });
+  } catch (error) {
+    console.error('Campanas batch insert error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/campanas/by-cargue/:idcargue', async (req, res) => {
+  try {
+    const rows = await q(
+      'SELECT idcampana, identificacion FROM campanas WHERE idcargue = $1',
       [req.params.idcargue]
     );
     res.json(rows);
