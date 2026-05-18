@@ -240,7 +240,16 @@ export function CargueModule() {
         const val = dataRows[r]?.[idx];
         if (!val || !val.trim()) continue;
         sampleCount++;
-        const clean = val.replace(/[.,]/g, m => m === ',' ? '.' : '');
+        const lastDot = val.lastIndexOf('.');
+        const lastComma = val.lastIndexOf(',');
+        let clean: string;
+        if (lastDot > -1 && lastComma > -1) {
+          clean = lastDot > lastComma ? val.replace(/,/g, '') : val.replace(/\./g, '').replace(',', '.');
+        } else if (lastComma > -1) {
+          clean = val.replace(',', '.');
+        } else {
+          clean = val;
+        }
         if (isNaN(Number(clean))) {
           invalidCount++;
         }
@@ -332,7 +341,22 @@ export function CargueModule() {
 
     const convertNumeric = (val: string): string | null => {
       if (!val || !val.trim()) return null;
-      const clean = val.trim().replace(/\./g, '').replace(',', '.');
+      const v = val.trim();
+      const lastDot = v.lastIndexOf('.');
+      const lastComma = v.lastIndexOf(',');
+      let clean: string;
+      if (lastDot > -1 && lastComma > -1) {
+        // Ambos separadores: el último es el decimal
+        if (lastDot > lastComma) {
+          clean = v.replace(/,/g, ''); // punto decimal, coma miles
+        } else {
+          clean = v.replace(/\./g, '').replace(',', '.'); // coma decimal, punto miles
+        }
+      } else if (lastComma > -1) {
+        clean = v.replace(',', '.'); // solo coma: decimal europeo
+      } else {
+        clean = v; // solo punto o sin separadores: formato estándar
+      }
       const num = Number(clean);
       return isNaN(num) ? null : String(num);
     };
