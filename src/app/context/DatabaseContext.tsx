@@ -6,6 +6,9 @@ import {
   Producto,
   Base,
   CargueTipo,
+  Origen,
+  TelefonoPreview,
+  TelefonoUploadResult,
   Cargue,
   TablaDef,
   DatoTipo,
@@ -35,6 +38,9 @@ import {
   updateBase,
   deleteBase,
   getCargueTipos,
+  getOrigenes,
+  previewTelefonos,
+  uploadTelefonos,
   getTablas,
   getDatoTipos,
   getTablaColumnaByTipoCargue,
@@ -84,6 +90,9 @@ interface DatabaseContextType {
   updateBase: (idbase: string, data: Partial<Base>, idusuariomod: string) => Promise<Base>;
   deleteBase: (idbase: string, idusuariomod: string) => Promise<void>;
   getCargueTipos: () => Promise<CargueTipo[]>;
+  getOrigenes: () => Promise<Origen[]>;
+  previewTelefonos: (idorigen: string, telefonos: { identificacion: string; telefono: string }[]) => Promise<TelefonoPreview>;
+  uploadTelefonos: (data: { idcargue: number; idorigen: string; idusuario: string; telefonos: { identificacion: string; telefono: string }[] }) => Promise<TelefonoUploadResult>;
   getTablas: () => Promise<TablaDef[]>;
   getDatoTipos: () => Promise<DatoTipo[]>;
   getTablaColumnaByTipoCargue: (idtipocargue: string) => Promise<TablaColumna[]>;
@@ -117,7 +126,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     getEmpresas, getEmpresaById, getEmpresaByRuc, createEmpresa, updateEmpresa, deleteEmpresa,
     getProductos, getProductoById, createProducto, updateProducto, deleteProducto,
     getBases, getBaseById, createBase, updateBase, deleteBase,
-    getCargueTipos, getTablas, getDatoTipos, getTablaColumnaByTipoCargue,
+    getCargueTipos, getOrigenes, previewTelefonos, uploadTelefonos, getTablas, getDatoTipos, getTablaColumnaByTipoCargue,
     getProductoHomologaciones, createProductoHomologacionBatch,
     updateProductoHomologacion, deleteProductoHomologacion,
     getCarguesByProducto, createCargue, inactivateCarguesByTipoCargue,

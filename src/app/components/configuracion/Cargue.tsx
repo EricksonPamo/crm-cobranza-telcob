@@ -31,6 +31,7 @@ export function CargueModule() {
   const [productos, setProductos] = useState<any[]>([]);
   const [bases, setBases] = useState<any[]>([]);
   const [cargueTipos, setCargueTipos] = useState<any[]>([]);
+  const [origenes, setOrigenes] = useState<any[]>([]);
   const [cargues, setCargues] = useState<Cargue[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +39,7 @@ export function CargueModule() {
   const [selectedProducto, setSelectedProducto] = useState('');
   const [selectedBase, setSelectedBase] = useState('');
   const [selectedTipoCargue, setSelectedTipoCargue] = useState('');
+  const [selectedOrigen, setSelectedOrigen] = useState('');
 
   // File
   const [file, setFile] = useState<File | null>(null);
@@ -58,9 +60,23 @@ export function CargueModule() {
     homologacion: ProductoHomologacion[];
   } | null>(null);
 
+  // Telefonos preview state
+  const [showTelefonosDialog, setShowTelefonosDialog] = useState(false);
+  const [telefonosPreview, setTelefonosPreview] = useState<{
+    totalFilas: number;
+    telefonosExistentes: number;
+    telefonosNuevos: number;
+    relacionesExistentes: number;
+    relacionesNuevas: number;
+  } | null>(null);
+  const [pendingTelefonosData, setPendingTelefonosData] = useState<{
+    telefonos: { identificacion: string; telefono: string }[];
+  } | null>(null);
+
   // Pagination
   const [paginaActual, setPaginaActual] = useState(1);
   const registrosPorPagina = 20;
+  const isTelefonos = cargueTipos.some((ct: any) => ct.idtipocargue === selectedTipoCargue && ct.nombre?.toLowerCase() === 'telefonos');
 
   useEffect(() => { loadData(); }, []);
 
@@ -68,8 +84,10 @@ export function CargueModule() {
     try {
       setLoading(true);
       const [prodData, ctData] = await Promise.all([db.getProductos(), db.getCargueTipos()]);
+      const origData = await db.getOrigenes();
       setProductos(prodData.filter((p: any) => p.estado === 'activo'));
       setCargueTipos(ctData);
+      setOrigenes(origData);
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast.error('Error al cargar datos');
@@ -507,12 +525,146 @@ export function CargueModule() {
     }
   };
 
+  // ===================== DOWNLOAD TELEFONOS TEMPLATE =====================
+  const handleDownloadTemplate = () => {
+    const csv = 'identificacion,telefono\n12345678,987654321\n87654321,912345678';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plantilla_telefonos.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ===================== TELEFONOS PREVIEW =====================
+  const handleTelefonosPreview = async () => {
+    try {
+      setUploading(true);
+      setProgress({ phase: 'Leyendo archivo...', done: 1, total: 3 });
+
+      const text = await file!.text();
+      const csvRows = parseCSV(text);
+
+      if (csvRows.length < 2) {
+        toast.error('El archivo no contiene filas de datos.');
+        setUploading(false);
+        setProgress({ phase: '', done: 0, total: 0 });
+        return;
+      }
+
+      const headers = csvRows[0].map(h => normalize(h));
+      const identIdx = headers.findIndex(h => h === 'identificacion');
+      const telIdx = headers.findIndex(h => h === 'telefono');
+
+      if (identIdx === -1 || telIdx === -1) {
+        toast.error('El archivo debe tener las columnas "identificacion" y "telefono".');
+        setUploading(false);
+        setProgress({ phase: '', done: 0, total: 0 });
+        return;
+      }
+
+      const telefonos: { identificacion: string; telefono: string }[] = [];
+      const dataRows = csvRows.slice(1);
+      let emptyRows = 0;
+      for (const row of dataRows) {
+        const ident = row[identIdx]?.trim();
+        const tel = row[telIdx]?.trim();
+        if (!ident || !tel) { emptyRows++; continue; }
+        telefonos.push({ identificacion: ident, telefono: tel });
+      }
+
+      if (telefonos.length === 0) {
+        toast.error('No se encontraron registros válidos en el archivo.');
+        setUploading(false);
+        setProgress({ phase: '', done: 0, total: 0 });
+        return;
+      }
+
+      setProgress({ phase: 'Consultando teléfonos existentes...', done: 2, total: 3 });
+      const preview = await db.previewTelefonos(selectedOrigen, telefonos);
+      setTelefonosPreview(preview);
+      setPendingTelefonosData({ telefonos });
+
+      if (emptyRows > 0) {
+        setValidationWarnings([`${emptyRows} fila(s) sin identificación o teléfono fueron omitidas.`]);
+      } else {
+        setValidationWarnings([]);
+      }
+
+      setShowTelefonosDialog(true);
+      setUploading(false);
+      setProgress({ phase: '', done: 0, total: 0 });
+    } catch (error: any) {
+      console.error('Error en preview teléfonos:', error);
+      toast.error(error?.message || 'Error al procesar el archivo de teléfonos');
+      setUploading(false);
+      setProgress({ phase: '', done: 0, total: 0 });
+    }
+  };
+
+  // ===================== TELEFONOS UPLOAD =====================
+  const handleTelefonosUpload = async () => {
+    if (!pendingTelefonosData) return;
+    setShowTelefonosDialog(false);
+
+    const userId = requireUser();
+    try {
+      setUploading(true);
+
+      setProgress({ phase: 'Creando registro de cargue...', done: 1, total: 4 });
+      const cargueRecord = await db.createCargue({
+        idtipocargue: selectedTipoCargue,
+        idbase: selectedBase,
+        nombrearchivo: file!.name,
+        cantidadregistros: pendingTelefonosData.telefonos.length,
+        idusuario: userId,
+        idusuariomod: userId,
+        estado: 'activo',
+      });
+
+      setProgress({ phase: 'Insertando teléfonos...', done: 2, total: 4 });
+      const result = await db.uploadTelefonos({
+        idcargue: cargueRecord.idcargue,
+        idorigen: selectedOrigen,
+        idusuario: userId,
+        telefonos: pendingTelefonosData.telefonos,
+      });
+
+      setProgress({ phase: 'Actualizando estado de cargues...', done: 3, total: 4 });
+      await db.inactivateCarguesByTipoCargue(selectedBase, selectedTipoCargue, cargueRecord.idcargue, userId);
+
+      setProgress({ phase: 'Completado', done: 4, total: 4 });
+      toast.success(`Cargue completado: ${result.telefonosInsertados} teléfonos nuevos, ${result.relacionesInsertadas} relaciones creadas`);
+
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      const updatedCargues = await db.getCarguesByProducto(selectedProducto);
+      setCargues(updatedCargues);
+    } catch (error: any) {
+      console.error('Error en cargue de teléfonos:', error);
+      toast.error(error?.message || 'Error al procesar el cargue de teléfonos');
+    } finally {
+      setUploading(false);
+      setProgress({ phase: '', done: 0, total: 0 });
+      setPendingTelefonosData(null);
+      setTelefonosPreview(null);
+    }
+  };
+
   // ===================== UPLOAD PROCESS =====================
   const handleUpload = async () => {
     if (!selectedProducto) { toast.error('Seleccione un producto'); return; }
     if (!selectedBase) { toast.error('Seleccione una base'); return; }
     if (!selectedTipoCargue) { toast.error('Seleccione un tipo de cargue'); return; }
     if (!file) { toast.error('Seleccione un archivo'); return; }
+    if (isTelefonos && !selectedOrigen) { toast.error('Seleccione un origen'); return; }
+
+    // Telefonos flow: no homologation needed
+    if (isTelefonos) {
+      return handleTelefonosPreview();
+    }
 
     const userId = requireUser();
 
@@ -636,7 +788,7 @@ export function CargueModule() {
           </div>
           <div className="flex items-center gap-1">
             <Label className="text-xs text-gray-500 whitespace-nowrap">Tipo Cargue:</Label>
-            <Select value={selectedTipoCargue} onValueChange={setSelectedTipoCargue}>
+            <Select value={selectedTipoCargue} onValueChange={(v) => { setSelectedTipoCargue(v); setSelectedOrigen(''); }} disabled={!selectedBase}>
               <SelectTrigger className="!h-7 !py-1 text-xs w-36 border-sky-500">
                 <SelectValue placeholder="Seleccione" />
               </SelectTrigger>
@@ -647,6 +799,25 @@ export function CargueModule() {
               </SelectContent>
             </Select>
           </div>
+          {cargueTipos.find((ct: any) => ct.idtipocargue === selectedTipoCargue && ct.nombre?.toLowerCase() === 'telefonos') && (
+            <div className="flex items-center gap-1">
+              <Label className="text-xs text-gray-500 whitespace-nowrap">Origen:</Label>
+              <Select value={selectedOrigen} onValueChange={setSelectedOrigen}>
+                <SelectTrigger className="!h-7 !py-1 text-xs w-36 border-sky-500">
+                  <SelectValue placeholder="Seleccione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {origenes.filter((o: any) => o.estado === 'activo').map((o: any) => (
+                    <SelectItem key={o.idorigen} value={o.idorigen}>{o.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="!h-7 text-xs" onClick={handleDownloadTemplate}>
+                <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
+                Plantilla
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* File upload */}
@@ -687,7 +858,7 @@ export function CargueModule() {
         <div className="space-y-2 flex justify-center">
           <Button
             onClick={handleUpload}
-            disabled={!file || !selectedProducto || !selectedBase || !selectedTipoCargue || uploading}
+            disabled={!file || !selectedProducto || !selectedBase || !selectedTipoCargue || (isTelefonos && !selectedOrigen) || uploading}
           >
             <Upload className="w-4 h-4 mr-2" />
             {uploading ? 'Cargando...' : 'Cargar Archivo'}
@@ -889,6 +1060,91 @@ export function CargueModule() {
                 Cerrar
               </Button>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Telefonos Preview Dialog */}
+      <Dialog open={showTelefonosDialog} onOpenChange={setShowTelefonosDialog}>
+        <DialogContent className="text-xs !max-w-[500px]">
+          <DialogHeader className="bg-sky-50 -mx-6 -mt-6 px-4 py-2 rounded-t-lg border-b border-sky-200">
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-sky-600" />
+              Resumen de Cargue de Teléfonos
+            </DialogTitle>
+            <DialogDescription>
+              Revise los datos antes de confirmar el cargue.
+            </DialogDescription>
+          </DialogHeader>
+
+          {telefonosPreview && (
+            <div className="space-y-3 pt-2">
+              <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-slate-500">Total filas en archivo:</span>{' '}
+                    <span className="font-semibold text-sky-700">{telefonosPreview.totalFilas.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Origen seleccionado:</span>{' '}
+                    <span className="font-semibold text-sky-700">{origenes.find((o: any) => o.idorigen === selectedOrigen)?.nombre || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="text-left px-3 py-1.5 border-b">Concepto</th>
+                      <th className="text-right px-3 py-1.5 border-b">Cantidad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="px-3 py-1.5">Teléfonos nuevos</td>
+                      <td className="px-3 py-1.5 text-right font-semibold text-green-700">{telefonosPreview.telefonosNuevos.toLocaleString()}</td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="px-3 py-1.5">Teléfonos ya existentes</td>
+                      <td className="px-3 py-1.5 text-right font-semibold text-blue-700">{telefonosPreview.telefonosExistentes.toLocaleString()}</td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="px-3 py-1.5">Relaciones nuevas (persona-teléfono)</td>
+                      <td className="px-3 py-1.5 text-right font-semibold text-green-700">{telefonosPreview.relacionesNuevas.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-1.5">Relaciones ya existentes</td>
+                      <td className="px-3 py-1.5 text-right font-semibold text-gray-600">{telefonosPreview.relacionesExistentes.toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {validationWarnings.length > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+                  {validationWarnings.map((w, i) => (
+                    <p key={i} className="text-yellow-700 flex items-start gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                      {w}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-3 border-t border-gray-200">
+            <Button onClick={handleTelefonosUpload} className="flex-1 !h-7">
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+              Confirmar cargue
+            </Button>
+            <Button
+              onClick={() => { setShowTelefonosDialog(false); setPendingTelefonosData(null); setTelefonosPreview(null); }}
+              className="flex-1 !h-7 bg-black hover:bg-gray-800 text-white"
+            >
+              Cancelar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

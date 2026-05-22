@@ -93,6 +93,27 @@ export interface CargueTipo {
   estado: string;
 }
 
+export interface Origen {
+  idorigen: string;
+  nombre: string;
+  estado: string;
+}
+
+export interface TelefonoPreview {
+  totalFilas: number;
+  telefonosExistentes: number;
+  telefonosNuevos: number;
+  relacionesExistentes: number;
+  relacionesNuevas: number;
+}
+
+export interface TelefonoUploadResult {
+  success: boolean;
+  telefonosInsertados: number;
+  relacionesInsertadas: number;
+  relacionesDuplicadas: number;
+}
+
 export interface Cargue {
   idcargue: number;
   idtipocargue: string;
@@ -287,6 +308,31 @@ export async function deleteBase(idbase: string, idusuariomod: string) {
 
 export async function getCargueTipos() {
   return apiFetch<CargueTipo[]>('/cargue-tipos');
+}
+
+// =====================================================
+// ORIGEN
+// =====================================================
+
+export async function getOrigenes() {
+  return apiFetch<Origen[]>('/origenes');
+}
+
+// =====================================================
+// TELEFONOS
+// =====================================================
+
+export async function previewTelefonos(idorigen: string, telefonos: { identificacion: string; telefono: string }[]) {
+  return apiPost<TelefonoPreview>('/telefonos/preview', { idorigen, telefonos });
+}
+
+export async function uploadTelefonos(data: {
+  idcargue: number;
+  idorigen: string;
+  idusuario: string;
+  telefonos: { identificacion: string; telefono: string }[];
+}) {
+  return apiPost<TelefonoUploadResult>('/telefonos/upload', data);
 }
 
 // =====================================================

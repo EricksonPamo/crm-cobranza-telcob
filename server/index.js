@@ -336,6 +336,165 @@ app.get('/api/cargue-tipos', async (req, res) => {
 });
 
 // =====================================================
+// ORIGEN
+// =====================================================
+app.get('/api/origenes', async (req, res) => {
+  try {
+    const rows = await q('SELECT * FROM origen WHERE estado = $1 ORDER BY nombre', ['activo']);
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// TELEFONOS - Preview upload
+// =====================================================
+app.post('/api/telefonos/preview', async (req, res) => {
+  try {
+    const { idorigen, telefonos } = req.body; // telefonos = [{identificacion, telefono}]
+    if (!idorigen || !Array.isArray(telefonos)) {
+      return res.status(400).json({ error: 'idorigen y telefonos son requeridos' });
+    }
+
+    // Get existing telefonos for this origen
+    const existingTels = await q('SELECT idtelefono, telefono FROM telefonos WHERE idorigen = $1 AND estado = $2', [idorigen, 'activo']);
+    const existingMap = new Map(existingTels.map(t => [t.telefono, t.idtelefono]));
+
+    let existentesTelefono = 0;
+    let nuevosTelefono = 0;
+    const nuevosSet = new Set();
+    const existentesSet = new Set();
+    const relacionesNuevas = [];
+
+    for (const row of telefonos) {
+      const tel = String(row.telefono).trim();
+      const ident = String(row.identificacion).trim();
+      if (!tel || !ident) continue;
+
+      if (existingMap.has(tel)) {
+        existentesTelefono++;
+        existentesSet.add(tel);
+        relacionesNuevas.push({ identificacion: ident, idtelefono: existingMap.get(tel), telefono: tel, existeTelefono: true });
+      } else {
+        if (!nuevosSet.has(tel)) {
+          nuevosTelefono++;
+          nuevosSet.add(tel);
+        }
+        relacionesNuevas.push({ identificacion: ident, telefono: tel, existeTelefono: false });
+      }
+    }
+
+    // Count existing relaciones for those that already exist
+    const existentesIds = [...existingMap.values()];
+    let relacionesExistentes = 0;
+    if (existentesIds.length > 0) {
+      const ids = existentesIds.map(id => `'${id}'`).join(',');
+      const identifs = [...new Set(telefonos.map(r => String(r.identificacion).trim()).filter(Boolean))];
+      if (identifs.length > 0) {
+        const identifList = identifs.map(i => `'${i.replace(/'/g, "''")}'`).join(',');
+        const existingRels = await q(
+          `SELECT COUNT(*) as count FROM personas_telefono WHERE idorigen = $1 AND idtelefono IN (${ids}) AND identificacion IN (${identifList})`,
+          [idorigen]
+        );
+        relacionesExistentes = parseInt(existingRels[0]?.count || '0');
+      }
+    }
+
+    res.json({
+      totalFilas: telefonos.length,
+      telefonosExistentes: existentesTelefono,
+      telefonosNuevos: nuevosTelefono,
+      relacionesExistentes,
+      relacionesNuevas: relacionesNuevas.length - relacionesExistentes,
+    });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// TELEFONOS - Batch upload
+// =====================================================
+app.post('/api/telefonos/upload', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { idcargue, idorigen, idusuario, telefonos } = req.body;
+    if (!idcargue || !idorigen || !idusuario || !Array.isArray(telefonos)) {
+      return res.status(400).json({ error: 'idcargue, idorigen, idusuario y telefonos son requeridos' });
+    }
+
+    await client.query('BEGIN');
+
+    // Get existing telefonos for this origen
+    const existingTels = await client.query('SELECT idtelefono, telefono FROM telefonos WHERE idorigen = $1 AND estado = $2', [idorigen, 'activo']);
+    const existingMap = new Map(existingTels.rows.map(t => [t.telefono, t.idtelefono]));
+
+    let insertadosTelefono = 0;
+    let insertadosRelacion = 0;
+    let duplicadosRelacion = 0;
+
+    // Process in batches
+    const batchSize = 200;
+    for (let i = 0; i < telefonos.length; i += batchSize) {
+      const batch = telefonos.slice(i, i + batchSize);
+      const newTelefonos = [];
+      const relationsToInsert = [];
+
+      for (const row of batch) {
+        const tel = String(row.telefono).trim();
+        const ident = String(row.identificacion).trim();
+        if (!tel || !ident) continue;
+
+        let idtelefono;
+        if (existingMap.has(tel)) {
+          idtelefono = existingMap.get(tel);
+        } else {
+          // Check if we already queued this new phone
+          const alreadyQueued = newTelefonos.find(n => n.telefono === tel);
+          if (alreadyQueued) {
+            idtelefono = alreadyQueued.idtelefono;
+          } else {
+            const insertResult = await client.query(
+              'INSERT INTO telefonos (idcargue, idorigen, telefono, idusuario, idusuariomod, estado) VALUES ($1, $2, $3, $4, $4, $5) RETURNING idtelefono',
+              [idcargue, idorigen, tel, idusuario, 'activo']
+            );
+            idtelefono = insertResult.rows[0].idtelefono;
+            existingMap.set(tel, idtelefono);
+            newTelefonos.push({ telefono: tel, idtelefono });
+            insertadosTelefono++;
+          }
+        }
+
+        relationsToInsert.push({ identificacion: ident, idtelefono, idorigen });
+      }
+
+      // Insert relaciones (personas_telefono), skip duplicates
+      for (const rel of relationsToInsert) {
+        try {
+          await client.query(
+            'INSERT INTO personas_telefono (identificacion, idtelefono, idorigen, idusuario, estado) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (identificacion, idtelefono, idorigen) DO NOTHING',
+            [rel.identificacion, rel.idtelefono, rel.idorigen, idusuario, 'activo']
+          );
+          insertadosRelacion++;
+        } catch (e) {
+          duplicadosRelacion++;
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      success: true,
+      telefonosInsertados: insertadosTelefono,
+      relacionesInsertadas: insertadosRelacion,
+      relacionesDuplicadas: duplicadosRelacion,
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// =====================================================
 // TABLA
 // =====================================================
 app.get('/api/tablas', async (req, res) => {
