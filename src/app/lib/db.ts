@@ -168,6 +168,10 @@ export interface ProductoHomologacion {
   filtro: boolean;
   nombreCampoOrigen: string | null;
   nombreAliasOrigen: string | null;
+  idtipodatoficha: string | null;
+  idsegmentoficha: string | null;
+  esvisible: boolean;
+  ordenvisualizacion: number;
   fecha_creacion: string;
   idusuariocrea: string;
   fechamodificacion: string | null;
@@ -177,10 +181,26 @@ export interface ProductoHomologacion {
   tipoCargueNombre: string;
   tablaNombre: string;
   tipoDatoNombre: string;
+  tipoDatoFichaNombre: string | null;
+  segmentoFichaNombre: string | null;
+}
+
+export interface FichaTipoDato {
+  idtipodatoficha: string;
+  nombre: string;
+  estado: string;
+}
+
+export interface FichaSegmento {
+  idsegmentoficha: string;
+  idtipodatoficha: string;
+  nombre: string;
+  ordenvisualizacion: number;
+  estado: string;
 }
 
 export type ProductoHomologacionInput = Omit<ProductoHomologacion,
-  'fecha_creacion' | 'fechamodificacion' | 'productoNombre' | 'tipoCargueNombre' | 'tablaNombre' | 'tipoDatoNombre'
+  'fecha_creacion' | 'fechamodificacion' | 'productoNombre' | 'tipoCargueNombre' | 'tablaNombre' | 'tipoDatoNombre' | 'tipoDatoFichaNombre' | 'segmentoFichaNombre'
 >;
 
 // =====================================================
@@ -352,6 +372,25 @@ export async function getDatoTipos() {
 }
 
 // =====================================================
+// FICHA TIPO DATO
+// =====================================================
+
+export async function getFichaTipoDato() {
+  return apiFetch<FichaTipoDato[]>('/ficha-tipo-dato');
+}
+
+// =====================================================
+// FICHA SEGMENTO
+// =====================================================
+
+export async function getFichaSegmento(idtipodatoficha?: string) {
+  const path = idtipodatoficha
+    ? `/ficha-segmento?idtipodatoficha=${idtipodatoficha}`
+    : '/ficha-segmento';
+  return apiFetch<FichaSegmento[]>(path);
+}
+
+// =====================================================
 // TABLA COLUMNA
 // =====================================================
 
@@ -374,7 +413,7 @@ export async function createProductoHomologacionBatch(records: ProductoHomologac
 export async function updateProductoHomologacion(
   idproducto: string,
   idhomologacion: string,
-  data: Partial<Pick<ProductoHomologacion, 'obligatorio' | 'filtro' | 'nombreCampoOrigen' | 'nombreAliasOrigen' | 'estado'>>,
+  data: Partial<Pick<ProductoHomologacion, 'obligatorio' | 'filtro' | 'nombreCampoOrigen' | 'nombreAliasOrigen' | 'idtipodatoficha' | 'idsegmentoficha' | 'esvisible' | 'ordenvisualizacion' | 'estado'>>,
   idusuariomod: string
 ) {
   return apiPut<ProductoHomologacion>(`/producto-homologacion/${idproducto}/${idhomologacion}`, { ...data, idusuariomod });

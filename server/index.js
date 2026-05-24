@@ -515,6 +515,34 @@ app.get('/api/dato-tipos', async (req, res) => {
 });
 
 // =====================================================
+// FICHA TIPO DATO
+// =====================================================
+app.get('/api/ficha-tipo-dato', async (req, res) => {
+  try {
+    const rows = await q('SELECT * FROM ficha_tipo_dato WHERE estado = $1 ORDER BY nombre', ['activo']);
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// FICHA SEGMENTO
+// =====================================================
+app.get('/api/ficha-segmento', async (req, res) => {
+  try {
+    const { idtipodatoficha } = req.query;
+    if (idtipodatoficha) {
+      const rows = await q(
+        'SELECT * FROM ficha_segmento WHERE idtipodatoficha = $1 AND estado = $2 ORDER BY ordenvisualizacion',
+        [idtipodatoficha, 'activo']
+      );
+      return res.json(rows);
+    }
+    const rows = await q('SELECT * FROM ficha_segmento WHERE estado = $1 ORDER BY idtipodatoficha, ordenvisualizacion', ['activo']);
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
 // TABLA COLUMNA
 // =====================================================
 app.get('/api/tabla-columna/:idtipocargue', async (req, res) => {
@@ -551,17 +579,24 @@ app.get('/api/producto-homologacion', async (req, res) => {
               ph.obligatorio, ph.filtro,
               ph.nombrecampoorigen as "nombreCampoOrigen",
               ph.nombrealiasorigen as "nombreAliasOrigen",
+              ph.idtipodatoficha as "idtipodatoficha",
+              ph.idsegmentoficha as "idsegmentoficha",
+              ph.esvisible, ph.ordenvisualizacion,
               ph.fecha_creacion, ph.idusuariocrea,
               ph.fechamodificacion, ph.idusuariomod, ph.estado,
               p.nombre as "productoNombre",
               ct.nombre as "tipoCargueNombre",
               t.nombre as "tablaNombre",
-              dt.nombre as "tipoDatoNombre"
+              dt.nombre as "tipoDatoNombre",
+              ftd.nombre as "tipoDatoFichaNombre",
+              fs.nombre as "segmentoFichaNombre"
        FROM producto_homologacion ph
        JOIN productos p ON ph.idproducto = p.idproducto
        JOIN cargue_tipo ct ON ph.idtipocargue = ct.idtipocargue
        JOIN tabla t ON ph.idtabla = t.idtabla
        JOIN dato_tipo dt ON ph.tipodato = dt.idtipodato
+       LEFT JOIN ficha_tipo_dato ftd ON ph.idtipodatoficha = ftd.idtipodatoficha
+       LEFT JOIN ficha_segmento fs ON ph.idsegmentoficha = fs.idsegmentoficha
        ORDER BY p.nombre, ct.nombre, t.nombre, ph.nombrecolumna`
     );
     res.json(rows);
@@ -577,17 +612,24 @@ app.get('/api/producto-homologacion/:idproducto/:idtipocargue', async (req, res)
               ph.obligatorio, ph.filtro,
               ph.nombrecampoorigen as "nombreCampoOrigen",
               ph.nombrealiasorigen as "nombreAliasOrigen",
+              ph.idtipodatoficha as "idtipodatoficha",
+              ph.idsegmentoficha as "idsegmentoficha",
+              ph.esvisible, ph.ordenvisualizacion,
               ph.fecha_creacion, ph.idusuariocrea,
               ph.fechamodificacion, ph.idusuariomod, ph.estado,
               p.nombre as "productoNombre",
               ct.nombre as "tipoCargueNombre",
               t.nombre as "tablaNombre",
-              dt.nombre as "tipoDatoNombre"
+              dt.nombre as "tipoDatoNombre",
+              ftd.nombre as "tipoDatoFichaNombre",
+              fs.nombre as "segmentoFichaNombre"
        FROM producto_homologacion ph
        JOIN productos p ON ph.idproducto = p.idproducto
        JOIN cargue_tipo ct ON ph.idtipocargue = ct.idtipocargue
        JOIN tabla t ON ph.idtabla = t.idtabla
        JOIN dato_tipo dt ON ph.tipodato = dt.idtipodato
+       LEFT JOIN ficha_tipo_dato ftd ON ph.idtipodatoficha = ftd.idtipodatoficha
+       LEFT JOIN ficha_segmento fs ON ph.idsegmentoficha = fs.idsegmentoficha
        WHERE ph.idproducto = $1 AND ph.idtipocargue = $2 AND ph.estado = $3
        ORDER BY t.nombre, ph.nombrecolumna`,
       [req.params.idproducto, req.params.idtipocargue, 'activo']
@@ -605,13 +647,18 @@ app.post('/api/producto-homologacion/batch', async (req, res) => {
         `INSERT INTO producto_homologacion
           (idproducto, idhomologacion, idtipocargue, idtabla, nombrecolumna,
            tipodato, obligatorio, filtro, nombrecampoorigen, nombrealiasorigen,
+           idtipodatoficha, idsegmentoficha, esvisible, ordenvisualizacion,
            idusuariocrea, idusuariomod, estado)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
          RETURNING *`,
         [record.idproducto, record.idhomologacion, record.idtipocargue,
          record.idtabla, record.nombreColumna, record.tipoDato,
          record.obligatorio, record.filtro, record.nombreCampoOrigen,
-         record.nombreAliasOrigen, record.idusuariocrea, record.idusuariomod,
+         record.nombreAliasOrigen,
+         record.idtipodatoficha || null, record.idsegmentoficha || null,
+         record.esvisible !== undefined ? record.esvisible : true,
+         record.ordenvisualizacion || 0,
+         record.idusuariocrea, record.idusuariomod,
          record.estado]
       );
       results.push(rows[0]);
@@ -629,11 +676,17 @@ app.put('/api/producto-homologacion/:idproducto/:idhomologacion', async (req, re
         filtro = COALESCE($2, filtro),
         nombrecampoorigen = COALESCE($3, nombrecampoorigen),
         nombrealiasorigen = COALESCE($4, nombrealiasorigen),
-        estado = COALESCE($5, estado),
+        idtipodatoficha = COALESCE($5, idtipodatoficha),
+        idsegmentoficha = COALESCE($6, idsegmentoficha),
+        esvisible = COALESCE($7, esvisible),
+        ordenvisualizacion = COALESCE($8, ordenvisualizacion),
+        estado = COALESCE($9, estado),
         fechamodificacion = NOW(),
-        idusuariomod = $6
-      WHERE idproducto = $7 AND idhomologacion = $8 RETURNING *`,
-      [d.obligatorio, d.filtro, d.nombreCampoOrigen, d.nombreAliasOrigen, d.estado, d.idusuariomod, req.params.idproducto, req.params.idhomologacion]
+        idusuariomod = $10
+      WHERE idproducto = $11 AND idhomologacion = $12 RETURNING *`,
+      [d.obligatorio, d.filtro, d.nombreCampoOrigen, d.nombreAliasOrigen,
+       d.idtipodatoficha, d.idsegmentoficha, d.esvisible, d.ordenvisualizacion,
+       d.estado, d.idusuariomod, req.params.idproducto, req.params.idhomologacion]
     );
     res.json(rows[0]);
   } catch (error) { res.status(500).json({ error: error.message }); }

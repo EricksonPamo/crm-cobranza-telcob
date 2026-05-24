@@ -15,6 +15,8 @@ import {
   TablaColumna,
   ProductoHomologacion,
   ProductoHomologacionInput,
+  FichaTipoDato,
+  FichaSegmento,
   getUsuarios,
   getUsuarioById,
   getUsuarioByUsername,
@@ -63,6 +65,8 @@ import {
   getCampanasIdByCargue,
   getProductoHomologacionByProductoTipo,
   getBasesByProducto,
+  getFichaTipoDato,
+  getFichaSegmento,
 } from '../lib/db';
 
 interface DatabaseContextType {
@@ -98,7 +102,7 @@ interface DatabaseContextType {
   getTablaColumnaByTipoCargue: (idtipocargue: string) => Promise<TablaColumna[]>;
   getProductoHomologaciones: () => Promise<ProductoHomologacion[]>;
   createProductoHomologacionBatch: (records: ProductoHomologacionInput[]) => Promise<ProductoHomologacion[]>;
-  updateProductoHomologacion: (idproducto: string, idhomologacion: string, data: Partial<Pick<ProductoHomologacion, 'obligatorio' | 'filtro' | 'nombreCampoOrigen' | 'nombreAliasOrigen' | 'estado'>>, idusuariomod: string) => Promise<ProductoHomologacion>;
+  updateProductoHomologacion: (idproducto: string, idhomologacion: string, data: Partial<Pick<ProductoHomologacion, 'obligatorio' | 'filtro' | 'nombreCampoOrigen' | 'nombreAliasOrigen' | 'idtipodatoficha' | 'idsegmentoficha' | 'esvisible' | 'ordenvisualizacion' | 'estado'>>, idusuariomod: string) => Promise<ProductoHomologacion>;
   deleteProductoHomologacion: (idproducto: string, idhomologacion: string, idusuariomod: string) => Promise<void>;
   getCarguesByProducto: (idproducto: string) => Promise<Cargue[]>;
   createCargue: (data: { idtipocargue: string; idbase: string; nombrearchivo: string; cantidadregistros: number; idusuario: string; idusuariomod: string; estado: string }) => Promise<{ idcargue: number }>;
@@ -115,6 +119,8 @@ interface DatabaseContextType {
   getCampanasIdByCargue: (idcargue: number) => Promise<{ idcampana: string; identificacion: string }[]>;
   getProductoHomologacionByProductoTipo: (idproducto: string, idtipocargue: string) => Promise<ProductoHomologacion[]>;
   getBasesByProducto: (idproducto: string) => Promise<Base[]>;
+  getFichaTipoDato: () => Promise<FichaTipoDato[]>;
+  getFichaSegmento: (idtipodatoficha?: string) => Promise<FichaSegmento[]>;
 }
 
 const DatabaseContext = createContext<DatabaseContextType | null>(null);
@@ -135,6 +141,8 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     getPersonasIdByCargue, getPagosIdByCargue, getCampanasIdByCargue,
     getProductoHomologacionByProductoTipo,
     getBasesByProducto,
+    getFichaTipoDato,
+    getFichaSegmento,
   };
 
   return (
