@@ -495,6 +495,88 @@ app.post('/api/telefonos/upload', async (req, res) => {
 });
 
 // =====================================================
+// RETIRO TIPO
+// =====================================================
+app.get('/api/retiro-tipos', async (req, res) => {
+  try {
+    const rows = await q('SELECT * FROM retiro_tipo WHERE estado = $1 ORDER BY nombre', ['activo']);
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// RETIROS - Preview
+// =====================================================
+app.post('/api/retiros/preview', async (req, res) => {
+  try {
+    const { idretirotipo, retiros } = req.body;
+    if (!idretirotipo || !Array.isArray(retiros)) {
+      return res.status(400).json({ error: 'idretirotipo y retiros son requeridos' });
+    }
+
+    let totalValidos = 0;
+    let totalInvalidos = 0;
+    for (const row of retiros) {
+      const valor = parseFloat(row.valor);
+      if (!isNaN(valor) && valor > 0) {
+        totalValidos++;
+      } else {
+        totalInvalidos++;
+      }
+    }
+
+    res.json({
+      totalFilas: retiros.length,
+      retirosValidos: totalValidos,
+      retirosInvalidos: totalInvalidos,
+    });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// RETIROS - Batch upload
+// =====================================================
+app.post('/api/retiros/upload', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { idcargue, idretirotipo, idusuario, retiros } = req.body;
+    if (!idcargue || !idretirotipo || !idusuario || !Array.isArray(retiros)) {
+      return res.status(400).json({ error: 'idcargue, idretirotipo, idusuario y retiros son requeridos' });
+    }
+
+    await client.query('BEGIN');
+
+    let insertados = 0;
+
+    const batchSize = 200;
+    for (let i = 0; i < retiros.length; i += batchSize) {
+      const batch = retiros.slice(i, i + batchSize);
+
+      for (const row of batch) {
+        const valor = parseFloat(row.valor);
+        if (isNaN(valor) || valor <= 0) continue;
+
+        const motivo = row.motivo ? String(row.motivo).trim() : null;
+
+        await client.query(
+          'INSERT INTO retiro (idretirotipo, idcargue, valor, motivo, idusuario, idusuariomod, estado) VALUES ($1, $2, $3, $4, $5, $5, $6)',
+          [idretirotipo, idcargue, valor, motivo, idusuario, 'activo']
+        );
+        insertados++;
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, retirosInsertados: insertados });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// =====================================================
 // TABLA
 // =====================================================
 app.get('/api/tablas', async (req, res) => {

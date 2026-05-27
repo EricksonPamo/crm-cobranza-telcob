@@ -114,6 +114,23 @@ export interface TelefonoUploadResult {
   relacionesDuplicadas: number;
 }
 
+export interface RetiroTipo {
+  idretirotipo: string;
+  nombre: string;
+  estado: string;
+}
+
+export interface RetiroPreview {
+  totalFilas: number;
+  retirosValidos: number;
+  retirosInvalidos: number;
+}
+
+export interface RetiroUploadResult {
+  success: boolean;
+  retirosInsertados: number;
+}
+
 export interface Cargue {
   idcargue: number;
   idtipocargue: string;
@@ -353,6 +370,31 @@ export async function uploadTelefonos(data: {
   telefonos: { identificacion: string; telefono: string }[];
 }) {
   return apiPost<TelefonoUploadResult>('/telefonos/upload', data);
+}
+
+// =====================================================
+// RETIRO TIPO
+// =====================================================
+
+export async function getRetiroTipos() {
+  return apiFetch<RetiroTipo[]>('/retiro-tipos');
+}
+
+// =====================================================
+// RETIROS
+// =====================================================
+
+export async function previewRetiro(idretirotipo: string, retiros: { valor: string; motivo: string }[]) {
+  return apiPost<RetiroPreview>('/retiros/preview', { idretirotipo, retiros });
+}
+
+export async function uploadRetiro(data: {
+  idcargue: number;
+  idretirotipo: string;
+  idusuario: string;
+  retiros: { valor: string; motivo: string }[];
+}) {
+  return apiPost<RetiroUploadResult>('/retiros/upload', data);
 }
 
 // =====================================================

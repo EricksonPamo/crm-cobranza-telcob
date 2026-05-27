@@ -9,6 +9,9 @@ import {
   Origen,
   TelefonoPreview,
   TelefonoUploadResult,
+  RetiroTipo,
+  RetiroPreview,
+  RetiroUploadResult,
   Cargue,
   TablaDef,
   DatoTipo,
@@ -43,6 +46,9 @@ import {
   getOrigenes,
   previewTelefonos,
   uploadTelefonos,
+  getRetiroTipos,
+  previewRetiro,
+  uploadRetiro,
   getTablas,
   getDatoTipos,
   getTablaColumnaByTipoCargue,
@@ -97,6 +103,9 @@ interface DatabaseContextType {
   getOrigenes: () => Promise<Origen[]>;
   previewTelefonos: (idorigen: string, telefonos: { identificacion: string; telefono: string }[]) => Promise<TelefonoPreview>;
   uploadTelefonos: (data: { idcargue: number; idorigen: string; idusuario: string; telefonos: { identificacion: string; telefono: string }[] }) => Promise<TelefonoUploadResult>;
+  getRetiroTipos: () => Promise<RetiroTipo[]>;
+  previewRetiro: (idretirotipo: string, retiros: { valor: string; motivo: string }[]) => Promise<RetiroPreview>;
+  uploadRetiro: (data: { idcargue: number; idretirotipo: string; idusuario: string; retiros: { valor: string; motivo: string }[] }) => Promise<RetiroUploadResult>;
   getTablas: () => Promise<TablaDef[]>;
   getDatoTipos: () => Promise<DatoTipo[]>;
   getTablaColumnaByTipoCargue: (idtipocargue: string) => Promise<TablaColumna[]>;
@@ -132,7 +141,8 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     getEmpresas, getEmpresaById, getEmpresaByRuc, createEmpresa, updateEmpresa, deleteEmpresa,
     getProductos, getProductoById, createProducto, updateProducto, deleteProducto,
     getBases, getBaseById, createBase, updateBase, deleteBase,
-    getCargueTipos, getOrigenes, previewTelefonos, uploadTelefonos, getTablas, getDatoTipos, getTablaColumnaByTipoCargue,
+    getCargueTipos, getOrigenes, previewTelefonos, uploadTelefonos,
+    getRetiroTipos, previewRetiro, uploadRetiro, getTablas, getDatoTipos, getTablaColumnaByTipoCargue,
     getProductoHomologaciones, createProductoHomologacionBatch,
     updateProductoHomologacion, deleteProductoHomologacion,
     getCarguesByProducto, createCargue, inactivateCarguesByTipoCargue,

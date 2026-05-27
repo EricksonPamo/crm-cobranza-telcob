@@ -32,6 +32,7 @@ export function CargueModule() {
   const [bases, setBases] = useState<any[]>([]);
   const [cargueTipos, setCargueTipos] = useState<any[]>([]);
   const [origenes, setOrigenes] = useState<any[]>([]);
+  const [retiroTipos, setRetiroTipos] = useState<any[]>([]);
   const [cargues, setCargues] = useState<Cargue[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,6 +41,7 @@ export function CargueModule() {
   const [selectedBase, setSelectedBase] = useState('');
   const [selectedTipoCargue, setSelectedTipoCargue] = useState('');
   const [selectedOrigen, setSelectedOrigen] = useState('');
+  const [selectedRetiroTipo, setSelectedRetiroTipo] = useState('');
 
   // File
   const [file, setFile] = useState<File | null>(null);
@@ -73,10 +75,22 @@ export function CargueModule() {
     telefonos: { identificacion: string; telefono: string }[];
   } | null>(null);
 
+  // Retiro preview state
+  const [showRetiroDialog, setShowRetiroDialog] = useState(false);
+  const [retiroPreview, setRetiroPreview] = useState<{
+    totalFilas: number;
+    retirosValidos: number;
+    retirosInvalidos: number;
+  } | null>(null);
+  const [pendingRetiroData, setPendingRetiroData] = useState<{
+    retiros: { valor: string; motivo: string }[];
+  } | null>(null);
+
   // Pagination
   const [paginaActual, setPaginaActual] = useState(1);
   const registrosPorPagina = 20;
   const isTelefonos = cargueTipos.some((ct: any) => ct.idtipocargue === selectedTipoCargue && ct.nombre?.toLowerCase() === 'telefonos');
+  const isRetiro = cargueTipos.some((ct: any) => ct.idtipocargue === selectedTipoCargue && ct.nombre?.toLowerCase() === 'retiro');
 
   useEffect(() => { loadData(); }, []);
 
@@ -85,9 +99,11 @@ export function CargueModule() {
       setLoading(true);
       const [prodData, ctData] = await Promise.all([db.getProductos(), db.getCargueTipos()]);
       const origData = await db.getOrigenes();
+      const rtData = await db.getRetiroTipos();
       setProductos(prodData.filter((p: any) => p.estado === 'activo'));
       setCargueTipos(ctData);
       setOrigenes(origData);
+      setRetiroTipos(rtData);
     } catch (error) {
       console.error('Error cargando datos:', error);
       toast.error('Error al cargar datos');
@@ -653,6 +669,134 @@ export function CargueModule() {
     }
   };
 
+  // ===================== DOWNLOAD RETIRO TEMPLATE =====================
+  const handleDownloadRetiroTemplate = () => {
+    const csv = 'valor,motivo\n100.00,Motivo de ejemplo\n250.50,Otro motivo';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plantilla_retiro.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ===================== RETIRO PREVIEW =====================
+  const handleRetiroPreview = async () => {
+    try {
+      setUploading(true);
+      setProgress({ phase: 'Leyendo archivo...', done: 1, total: 3 });
+
+      const text = await file!.text();
+      const csvRows = parseCSV(text);
+
+      if (csvRows.length < 2) {
+        toast.error('El archivo no contiene filas de datos.');
+        setUploading(false);
+        setProgress({ phase: '', done: 0, total: 0 });
+        return;
+      }
+
+      const headers = csvRows[0].map(h => normalize(h));
+      const valorIdx = headers.findIndex(h => h === 'valor');
+      const motivoIdx = headers.findIndex(h => h === 'motivo');
+
+      if (valorIdx === -1) {
+        toast.error('El archivo debe tener la columna "valor".');
+        setUploading(false);
+        setProgress({ phase: '', done: 0, total: 0 });
+        return;
+      }
+
+      const retiros: { valor: string; motivo: string }[] = [];
+      const dataRows = csvRows.slice(1);
+      let emptyRows = 0;
+      for (const row of dataRows) {
+        const valor = row[valorIdx]?.trim();
+        const motivo = motivoIdx !== -1 ? row[motivoIdx]?.trim() : '';
+        if (!valor) { emptyRows++; continue; }
+        retiros.push({ valor, motivo: motivo || '' });
+      }
+
+      if (retiros.length === 0) {
+        toast.error('No se encontraron registros válidos en el archivo.');
+        setUploading(false);
+        setProgress({ phase: '', done: 0, total: 0 });
+        return;
+      }
+
+      setProgress({ phase: 'Consultando vista previa...', done: 2, total: 3 });
+      const preview = await db.previewRetiro(selectedRetiroTipo, retiros);
+      setRetiroPreview(preview);
+      setPendingRetiroData({ retiros });
+
+      if (emptyRows > 0) {
+        setValidationWarnings([`${emptyRows} fila(s) sin valor fueron omitidas.`]);
+      } else {
+        setValidationWarnings([]);
+      }
+
+      setShowRetiroDialog(true);
+      setUploading(false);
+      setProgress({ phase: '', done: 0, total: 0 });
+    } catch (error: any) {
+      console.error('Error en preview retiro:', error);
+      toast.error(error?.message || 'Error al procesar el archivo de retiros');
+      setUploading(false);
+      setProgress({ phase: '', done: 0, total: 0 });
+    }
+  };
+
+  // ===================== RETIRO UPLOAD =====================
+  const handleRetiroUpload = async () => {
+    if (!pendingRetiroData) return;
+    setShowRetiroDialog(false);
+
+    const userId = requireUser();
+    try {
+      setUploading(true);
+
+      setProgress({ phase: 'Creando registro de cargue...', done: 1, total: 4 });
+      const cargueRecord = await db.createCargue({
+        idtipocargue: selectedTipoCargue,
+        idbase: selectedBase,
+        nombrearchivo: file!.name,
+        cantidadregistros: pendingRetiroData.retiros.length,
+        idusuario: userId,
+        idusuariomod: userId,
+        estado: 'activo',
+      });
+
+      setProgress({ phase: 'Insertando retiros...', done: 2, total: 4 });
+      const result = await db.uploadRetiro({
+        idcargue: cargueRecord.idcargue,
+        idretirotipo: selectedRetiroTipo,
+        idusuario: userId,
+        retiros: pendingRetiroData.retiros,
+      });
+
+      setProgress({ phase: 'Actualizando estado de cargues...', done: 3, total: 4 });
+      await db.inactivateCarguesByTipoCargue(selectedBase, selectedTipoCargue, cargueRecord.idcargue, userId);
+
+      setProgress({ phase: 'Completado', done: 4, total: 4 });
+      toast.success(`Cargue completado: ${result.retirosInsertados} retiros insertados`);
+
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      const updatedCargues = await db.getCarguesByProducto(selectedProducto);
+      setCargues(updatedCargues);
+    } catch (error: any) {
+      console.error('Error en cargue de retiros:', error);
+      toast.error(error?.message || 'Error al procesar el cargue de retiros');
+    } finally {
+      setUploading(false);
+      setProgress({ phase: '', done: 0, total: 0 });
+      setPendingRetiroData(null);
+      setRetiroPreview(null);
+    }
+  };
+
   // ===================== UPLOAD PROCESS =====================
   const handleUpload = async () => {
     if (!selectedProducto) { toast.error('Seleccione un producto'); return; }
@@ -660,10 +804,16 @@ export function CargueModule() {
     if (!selectedTipoCargue) { toast.error('Seleccione un tipo de cargue'); return; }
     if (!file) { toast.error('Seleccione un archivo'); return; }
     if (isTelefonos && !selectedOrigen) { toast.error('Seleccione un origen'); return; }
+    if (isRetiro && !selectedRetiroTipo) { toast.error('Seleccione un tipo de retiro'); return; }
 
     // Telefonos flow: no homologation needed
     if (isTelefonos) {
       return handleTelefonosPreview();
+    }
+
+    // Retiro flow: no homologation needed
+    if (isRetiro) {
+      return handleRetiroPreview();
     }
 
     const userId = requireUser();
@@ -788,7 +938,7 @@ export function CargueModule() {
           </div>
           <div className="flex items-center gap-1">
             <Label className="text-xs text-gray-500 whitespace-nowrap">Tipo Cargue:</Label>
-            <Select value={selectedTipoCargue} onValueChange={(v) => { setSelectedTipoCargue(v); setSelectedOrigen(''); }} disabled={!selectedBase}>
+            <Select value={selectedTipoCargue} onValueChange={(v) => { setSelectedTipoCargue(v); setSelectedOrigen(''); setSelectedRetiroTipo(''); }} disabled={!selectedBase}>
               <SelectTrigger className="!h-7 !py-1 text-xs w-36 border-sky-500">
                 <SelectValue placeholder="Seleccione" />
               </SelectTrigger>
@@ -813,6 +963,25 @@ export function CargueModule() {
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm" className="!h-7 text-xs" onClick={handleDownloadTemplate}>
+                <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
+                Plantilla
+              </Button>
+            </div>
+          )}
+          {cargueTipos.find((ct: any) => ct.idtipocargue === selectedTipoCargue && ct.nombre?.toLowerCase() === 'retiro') && (
+            <div className="flex items-center gap-1">
+              <Label className="text-xs text-gray-500 whitespace-nowrap">Tipo Retiro:</Label>
+              <Select value={selectedRetiroTipo} onValueChange={setSelectedRetiroTipo}>
+                <SelectTrigger className="!h-7 !py-1 text-xs w-36 border-sky-500">
+                  <SelectValue placeholder="Seleccione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {retiroTipos.filter((rt: any) => rt.estado === 'activo').map((rt: any) => (
+                    <SelectItem key={rt.idretirotipo} value={rt.idretirotipo}>{rt.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="!h-7 text-xs" onClick={handleDownloadRetiroTemplate}>
                 <FileSpreadsheet className="w-3.5 h-3.5 mr-1" />
                 Plantilla
               </Button>
@@ -858,7 +1027,7 @@ export function CargueModule() {
         <div className="space-y-2 flex justify-center">
           <Button
             onClick={handleUpload}
-            disabled={!file || !selectedProducto || !selectedBase || !selectedTipoCargue || (isTelefonos && !selectedOrigen) || uploading}
+            disabled={!file || !selectedProducto || !selectedBase || !selectedTipoCargue || (isTelefonos && !selectedOrigen) || (isRetiro && !selectedRetiroTipo) || uploading}
           >
             <Upload className="w-4 h-4 mr-2" />
             {uploading ? 'Cargando...' : 'Cargar Archivo'}
@@ -1141,6 +1310,83 @@ export function CargueModule() {
             </Button>
             <Button
               onClick={() => { setShowTelefonosDialog(false); setPendingTelefonosData(null); setTelefonosPreview(null); }}
+              className="flex-1 !h-7 bg-black hover:bg-gray-800 text-white"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Retiro Preview Dialog */}
+      <Dialog open={showRetiroDialog} onOpenChange={setShowRetiroDialog}>
+        <DialogContent className="text-xs !max-w-[500px]">
+          <DialogHeader className="bg-sky-50 -mx-6 -mt-6 px-4 py-2 rounded-t-lg border-b border-sky-200">
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-sky-600" />
+              Resumen de Cargue de Retiros
+            </DialogTitle>
+            <DialogDescription>
+              Revise los datos antes de confirmar el cargue.
+            </DialogDescription>
+          </DialogHeader>
+
+          {retiroPreview && (
+            <div className="space-y-3 pt-2">
+              <div className="bg-sky-50 border border-sky-200 rounded-lg p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-slate-500">Total filas en archivo:</span>{' '}
+                    <span className="font-semibold text-sky-700">{retiroPreview.totalFilas.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Tipo de retiro:</span>{' '}
+                    <span className="font-semibold text-sky-700">{retiroTipos.find((rt: any) => rt.idretirotipo === selectedRetiroTipo)?.nombre || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="text-left px-3 py-1.5 border-b">Concepto</th>
+                      <th className="text-right px-3 py-1.5 border-b">Cantidad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="px-3 py-1.5">Retiros válidos</td>
+                      <td className="px-3 py-1.5 text-right font-semibold text-green-700">{retiroPreview.retirosValidos.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-1.5">Retiros inválidos (sin valor)</td>
+                      <td className="px-3 py-1.5 text-right font-semibold text-red-700">{retiroPreview.retirosInvalidos.toLocaleString()}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {validationWarnings.length > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+                  {validationWarnings.map((w, i) => (
+                    <p key={i} className="text-yellow-700 flex items-start gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                      {w}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-3 border-t border-gray-200">
+            <Button onClick={handleRetiroUpload} className="flex-1 !h-7">
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+              Confirmar cargue
+            </Button>
+            <Button
+              onClick={() => { setShowRetiroDialog(false); setPendingRetiroData(null); setRetiroPreview(null); }}
               className="flex-1 !h-7 bg-black hover:bg-gray-800 text-white"
             >
               Cancelar
