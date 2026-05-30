@@ -73,6 +73,16 @@ import {
   getBasesByProducto,
   getFichaTipoDato,
   getFichaSegmento,
+  CanalComunicacion,
+  TipificacionTipo,
+  TipificacionRecord,
+  TipificacionImportRow,
+  TipificacionImportResult,
+  getCanalComunicacion,
+  getTipificacionTipo,
+  getTipificaciones,
+  getTipificacionesByProducto,
+  importTipificacion,
 } from '../lib/db';
 
 interface DatabaseContextType {
@@ -130,6 +140,11 @@ interface DatabaseContextType {
   getBasesByProducto: (idproducto: string) => Promise<Base[]>;
   getFichaTipoDato: () => Promise<FichaTipoDato[]>;
   getFichaSegmento: (idtipodatoficha?: string) => Promise<FichaSegmento[]>;
+  getCanalComunicacion: () => Promise<CanalComunicacion[]>;
+  getTipificacionTipo: () => Promise<TipificacionTipo[]>;
+  getTipificaciones: () => Promise<TipificacionRecord[]>;
+  getTipificacionesByProducto: (idproducto: string) => Promise<TipificacionRecord[]>;
+  importTipificacion: (idproducto: string, idusuario: string, rows: TipificacionImportRow[]) => Promise<TipificacionImportResult>;
 }
 
 const DatabaseContext = createContext<DatabaseContextType | null>(null);
@@ -153,6 +168,11 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     getBasesByProducto,
     getFichaTipoDato,
     getFichaSegmento,
+    getCanalComunicacion,
+    getTipificacionTipo,
+    getTipificaciones,
+    getTipificacionesByProducto,
+    importTipificacion,
   };
 
   return (

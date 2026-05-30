@@ -6,7 +6,8 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '50mb', charset: 'utf-8' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true, charset: 'utf-8' }));
 
 // Helper: query with params
 async function q(text, params) {
@@ -1071,6 +1072,291 @@ app.get('/api/campanas/by-cargue/:idcargue', async (req, res) => {
     );
     res.json(rows);
   } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// CANAL COMUNICACION
+// =====================================================
+app.get('/api/canal-comunicacion', async (req, res) => {
+  try {
+    const rows = await q('SELECT * FROM canal_comunicacion WHERE estado = $1 ORDER BY nombre', ['activo']);
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// TIPIFICACION TIPO
+// =====================================================
+app.get('/api/tipificacion-tipo', async (req, res) => {
+  try {
+    const rows = await q('SELECT * FROM tipificacion_tipo WHERE estado = $1 ORDER BY nombre', ['activo']);
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// TIPIFICACION
+// =====================================================
+app.get('/api/tipificacion', async (req, res) => {
+  try {
+    const rows = await q(
+      `SELECT t.*,
+        cc.nombre as canal_nombre,
+        tt.nombre as tipo_nombre,
+        tt.codtipotipificacion as tipo_codigo
+       FROM tipificacion t
+       JOIN canal_comunicacion cc ON t.idcanalcomunicacion = cc.idcanalcomunicacion
+       JOIN tipificacion_tipo tt ON t.idtipotipificacion = tt.idtipotipificacion
+       WHERE t.estado = 'activo'
+       ORDER BY tt.nombre, cc.nombre, t.peso, t.accion`,
+      []
+    );
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/api/tipificacion/producto/:idproducto', async (req, res) => {
+  try {
+    const { idproducto } = req.params;
+    const rows = await q(
+      `SELECT t.*,
+        cc.nombre as canal_nombre,
+        cc.idcanalcomunicacion,
+        tt.nombre as tipo_nombre,
+        tt.idtipotipificacion,
+        tt.codtipotipificacion as tipo_codigo
+       FROM tipificacion t
+       JOIN canal_comunicacion cc ON t.idcanalcomunicacion = cc.idcanalcomunicacion
+       JOIN tipificacion_tipo tt ON t.idtipotipificacion = tt.idtipotipificacion
+       JOIN producto_tipificacion pt ON pt.idtipificacion = tt.idtipotipificacion
+       WHERE pt.idproducto = $1 AND pt.estado = 'activo' AND t.estado = 'activo'
+       ORDER BY tt.nombre, cc.nombre, t.peso, t.accion`,
+      [idproducto]
+    );
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// TIPIFICACION IMPORT
+// =====================================================
+app.post('/api/tipificacion/import', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { idproducto, idusuario, rows } = req.body;
+    if (!idproducto || !idusuario || !Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: 'idproducto, idusuario y rows son requeridos' });
+    }
+
+    // Helper: normalize string for comparison (trim, preserve ñ/tildes)
+    const normalize = (s) => (s || '').trim();
+
+    // --- VALIDATION PHASE ---
+    const errors = [];
+    const warnings = [];
+
+    // Load existing canales and tipos for validation
+    const existingCanales = await client.query('SELECT idcanalcomunicacion, nombre FROM canal_comunicacion WHERE estado = $1', ['activo']);
+    const canalNameSet = new Set(existingCanales.rows.map(c => c.nombre.toUpperCase()));
+    const canalMap = new Map();
+    for (const c of existingCanales.rows) {
+      canalMap.set(c.nombre.toUpperCase(), c.idcanalcomunicacion);
+    }
+
+    const existingTipos = await client.query('SELECT idtipotipificacion, nombre, codtipotipificacion FROM tipificacion_tipo WHERE estado = $1', ['activo']);
+    const tipoNameSet = new Set(existingTipos.rows.map(t => t.nombre.toUpperCase()));
+    const tipoMap = new Map();
+    for (const t of existingTipos.rows) {
+      tipoMap.set(t.nombre.toUpperCase(), { id: t.idtipotipificacion, cod: t.codtipotipificacion });
+    }
+
+    // Load existing tipificaciones for duplicate check (CANAL + TIPO + RESULTADO)
+    const existingTipificaciones = await client.query(
+      `SELECT UPPER(cc.nombre) as canal, UPPER(tt.nombre) as tipo, UPPER(t.resultado) as resultado
+       FROM tipificacion t
+       JOIN canal_comunicacion cc ON t.idcanalcomunicacion = cc.idcanalcomunicacion
+       JOIN tipificacion_tipo tt ON t.idtipotipificacion = tt.idtipotipificacion
+       WHERE t.estado = 'activo'`
+    );
+    const existingKeys = new Set(existingTipificaciones.rows.map(r => `${r.canal}|${r.tipo}|${r.resultado}`));
+
+    // Validate each row
+    const validRows = [];
+    const seenInFile = new Set();
+
+    rows.forEach((r, idx) => {
+      const fila = idx + 2; // 1-based + header row
+      const canal = normalize(r.CANAL_COMUNICACION);
+      const tipo = normalize(r.TIPO_TIPIFICACION);
+      const resultado = normalize(r.RESULTADO);
+
+      // Required fields
+      if (!canal) {
+        errors.push(`Fila ${fila}: CANAL_COMUNICACION es obligatorio`);
+        return;
+      }
+      if (!tipo) {
+        errors.push(`Fila ${fila}: TIPO_TIPIFICACION es obligatorio`);
+        return;
+      }
+      if (!resultado) {
+        errors.push(`Fila ${fila}: RESULTADO es obligatorio`);
+        return;
+      }
+
+      // Validate canal exists in database
+      if (!canalNameSet.has(canal.toUpperCase())) {
+        errors.push(`Fila ${fila}: Canal de comunicación "${canal}" no existe en la tabla canal_comunicacion`);
+        return;
+      }
+
+      // Validate tipo exists in database
+      if (!tipoNameSet.has(tipo.toUpperCase())) {
+        errors.push(`Fila ${fila}: Tipo de tipificación "${tipo}" no existe en la tabla tipificacion_tipo`);
+        return;
+      }
+
+      // Check duplicate within file (CANAL + TIPO + RESULTADO)
+      const fileKey = `${canal.toUpperCase()}|${tipo.toUpperCase()}|${resultado.toUpperCase()}`;
+      if (seenInFile.has(fileKey)) {
+        warnings.push(`Fila ${fila}: registro duplicado en el archivo (Canal: ${canal}, Tipo: ${tipo}, Resultado: ${resultado})`);
+      }
+      seenInFile.add(fileKey);
+
+      // Check duplicate against database
+      if (existingKeys.has(fileKey)) {
+        warnings.push(`Fila ${fila}: ya existe en la base de datos (Canal: ${canal}, Tipo: ${tipo}, Resultado: ${resultado})`);
+      }
+
+      // Validate DESTACADO, MOSTRAR_WEB, DISPONEREGLA
+      const dest = normalize(r.DESTACADO || 'no').toLowerCase();
+      const web = normalize(r.MOSTRAR_WEB || 'si').toLowerCase();
+      const regla = normalize(r.DISPONEREGLA || 'no').toLowerCase();
+      if (!['si', 'no'].includes(dest)) {
+        warnings.push(`Fila ${fila}: DESTACADO debe ser 'si' o 'no' (valor: '${r.DESTACADO}')`);
+      }
+      if (!['si', 'no'].includes(web)) {
+        warnings.push(`Fila ${fila}: MOSTRAR_WEB debe ser 'si' o 'no' (valor: '${r.MOSTRAR_WEB}')`);
+      }
+      if (!['si', 'no'].includes(regla)) {
+        warnings.push(`Fila ${fila}: DISPONEREGLA debe ser 'si' o 'no' (valor: '${r.DISPONEREGLA}')`);
+      }
+
+      validRows.push(r);
+    });
+
+    // If there are blocking errors, return them
+    if (errors.length > 0) {
+      return res.status(400).json({ error: errors.join('. '), warnings });
+    }
+
+    // Filter out rows that already exist in the database (skip duplicates)
+    const rowsToInsert = validRows.filter(r => {
+      const canal = normalize(r.CANAL_COMUNICACION).toUpperCase();
+      const tipo = normalize(r.TIPO_TIPIFICACION).toUpperCase();
+      const resultado = normalize(r.RESULTADO).toUpperCase();
+      const key = `${canal}|${tipo}|${resultado}`;
+      return !existingKeys.has(key);
+    });
+
+    if (rowsToInsert.length === 0) {
+      return res.json({ success: true, inserted: 0, skipped: 0, warnings: ['Todos los registros ya existen en la base de datos'] });
+    }
+
+    // Also skip rows duplicated within the file itself (keep first occurrence)
+    const seenKeys = new Set();
+    const dedupedRows = [];
+    for (const r of rowsToInsert) {
+      const canal = normalize(r.CANAL_COMUNICACION).toUpperCase();
+      const tipo = normalize(r.TIPO_TIPIFICACION).toUpperCase();
+      const resultado = normalize(r.RESULTADO).toUpperCase();
+      const key = `${canal}|${tipo}|${resultado}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        dedupedRows.push(r);
+      }
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Build maps for UUID resolution (canal and tipo already validated above)
+    //    Maps are already populated from the validation phase
+
+    // 2. Insert tipificacion rows
+    const TIPIFICACION_COLUMNS = [
+      'idcanalcomunicacion', 'idtipotipificacion', 'codaccion', 'accion',
+      'codresultado', 'resultado', 'resultado1', 'resultado2', 'resultado3',
+      'resultado4', 'resultado5', 'destacado', 'mostrarweb', 'peso',
+      'disponeregla', 'idusuario', 'idusuariomod', 'estado'
+    ];
+
+    const batchData = dedupedRows.map(r => {
+      const canalNombre = normalize(r.CANAL_COMUNICACION).toUpperCase();
+      const tipoNombre = normalize(r.TIPO_TIPIFICACION).toUpperCase();
+      const idcanal = canalMap.get(canalNombre);
+      const tipoInfo = tipoMap.get(tipoNombre);
+      return {
+        idcanalcomunicacion: idcanal,
+        idtipotipificacion: tipoInfo?.id,
+        codaccion: normalize(r.CODACCION) || null,
+        accion: normalize(r.ACCION) || null,
+        codresultado: normalize(r.CODRESULTADO) || null,
+        resultado: normalize(r.RESULTADO),
+        resultado1: normalize(r.RESULTADO1) || null,
+        resultado2: normalize(r.RESULTADO2) || null,
+        resultado3: normalize(r.RESULTADO3) || null,
+        resultado4: normalize(r.RESULTADO4) || null,
+        resultado5: normalize(r.RESULTADO5) || null,
+        destacado: (normalize(r.DESTACADO) || 'no').toLowerCase(),
+        mostrarweb: (normalize(r.MOSTRAR_WEB) || 'si').toLowerCase(),
+        peso: parseInt(r.PESO) || 0,
+        disponeregla: (normalize(r.DISPONEREGLA) || 'no').toLowerCase(),
+        idusuario,
+        idusuariomod: idusuario,
+        estado: 'activo'
+      };
+    }).filter(r => r.idcanalcomunicacion && r.idtipotipificacion);
+
+    let insertedCount = 0;
+    const batchSize = 200;
+    for (let i = 0; i < batchData.length; i += batchSize) {
+      const batch = batchData.slice(i, i + batchSize);
+      const { query, params } = buildMultiRowInsert(batch, 'tipificacion', TIPIFICACION_COLUMNS);
+      await client.query(query, params);
+      insertedCount += batch.length;
+    }
+
+    // 3. Insert producto_tipificacion for each unique tipo (skip existing)
+    const allTipoIds = new Set();
+    for (const r of dedupedRows) {
+      const tipoNombre = normalize(r.TIPO_TIPIFICACION).toUpperCase();
+      const tipoInfo = tipoMap.get(tipoNombre);
+      if (tipoInfo) allTipoIds.add(tipoInfo.id);
+    }
+
+    for (const idtipotipificacion of allTipoIds) {
+      await client.query(
+        `INSERT INTO producto_tipificacion (idproducto, idtipificacion, idusuario, idusuariomod, estado)
+         VALUES ($1, $2, $3, $3, 'activo')
+         ON CONFLICT (idproducto, idtipificacion) DO NOTHING`,
+        [idproducto, idtipotipificacion, idusuario]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      success: true,
+      inserted: insertedCount,
+      skipped: validRows.length - insertedCount,
+      warnings: warnings.length > 0 ? warnings : undefined
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Tipificacion import error:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
 });
 
 // =====================================================

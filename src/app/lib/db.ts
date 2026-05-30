@@ -585,3 +585,114 @@ export async function getCampanasIdByCargue(idcargue: number) {
 export async function getBasesByProducto(idproducto: string) {
   return apiFetch<Base[]>(`/bases/producto/${idproducto}`);
 }
+
+// =====================================================
+// CANAL COMUNICACION
+// =====================================================
+
+export interface CanalComunicacion {
+  idcanalcomunicacion: string;
+  nombre: string;
+  fechacreacion: string;
+  idusuario: string;
+  fechamodificacion: string | null;
+  idusuariomod: string;
+  estado: string;
+}
+
+export async function getCanalComunicacion() {
+  return apiFetch<CanalComunicacion[]>('/canal-comunicacion');
+}
+
+// =====================================================
+// TIPIFICACION TIPO
+// =====================================================
+
+export interface TipificacionTipo {
+  idtipotipificacion: string;
+  codtipotipificacion: string;
+  nombre: string;
+  fechacreacion: string;
+  idusuario: string;
+  fechamodificacion: string | null;
+  idusuariomod: string;
+  estado: string;
+}
+
+export async function getTipificacionTipo() {
+  return apiFetch<TipificacionTipo[]>('/tipificacion-tipo');
+}
+
+// =====================================================
+// TIPIFICACION
+// =====================================================
+
+export interface TipificacionRecord {
+  idtipificacion: string;
+  idcanalcomunicacion: string;
+  idtipotipificacion: string;
+  canal_nombre: string;
+  tipo_nombre: string;
+  tipo_codigo: string;
+  codaccion: string | null;
+  accion: string | null;
+  codresultado: string | null;
+  resultado: string | null;
+  resultado1: string | null;
+  resultado2: string | null;
+  resultado3: string | null;
+  resultado4: string | null;
+  resultado5: string | null;
+  destacado: string;
+  mostrarweb: string;
+  peso: number;
+  disponeregla: string;
+  fechacreacion: string;
+  idusuario: string;
+  fechamodificacion: string | null;
+  idusuariomod: string;
+  estado: string;
+}
+
+export async function getTipificaciones() {
+  return apiFetch<TipificacionRecord[]>('/tipificacion');
+}
+
+export async function getTipificacionesByProducto(idproducto: string) {
+  return apiFetch<TipificacionRecord[]>(`/tipificacion/producto/${idproducto}`);
+}
+
+export interface TipificacionImportRow {
+  CANAL_COMUNICACION: string;
+  TIPO_TIPIFICACION: string;
+  CODACCION: string;
+  ACCION: string;
+  CODRESULTADO: string;
+  RESULTADO: string;
+  RESULTADO1: string;
+  RESULTADO2: string;
+  RESULTADO3: string;
+  RESULTADO4: string;
+  RESULTADO5: string;
+  DESTACADO: string;
+  MOSTRAR_WEB: string;
+  PESO: string;
+  DISPONEREGLA: string;
+}
+
+export interface TipificacionImportResult {
+  success: boolean;
+  inserted: number;
+  skipped?: number;
+  warnings?: string[];
+  canalesCreated?: number;
+  tiposCreated?: number;
+}
+
+export async function importTipificacion(
+  idproducto: string,
+  idusuario: string,
+  rows: TipificacionImportRow[]
+): Promise<TipificacionImportResult> {
+  return apiPost<TipificacionImportResult>('/tipificacion/import', { idproducto, idusuario, rows });
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, SyntheticEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, SyntheticEvent } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -25,9 +25,12 @@ import {
   SelectValue,
 } from '../ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Plus, Pencil, Trash2, Settings, GitBranch, Eye, EyeOff, Power, PowerOff, Search, Tags } from 'lucide-react';
+import { Plus, Pencil, Trash2, Settings, GitBranch, Eye, EyeOff, Power, PowerOff, Search, Tags, Upload, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Checkbox } from '../ui/checkbox';
+import { useDatabase } from '../../context/DatabaseContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { TipificacionImportRow, Producto as ProductoDB, CanalComunicacion, TipificacionTipo } from '../../lib/db';
 
 interface Producto {
   id: string;
@@ -137,7 +140,12 @@ const TIPOS_USUARIO = [
 ];
 
 export function Tipificacion() {
+  const db = useDatabase();
+  const { currentUser } = useAuth();
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [dbProductos, setDbProductos] = useState<ProductoDB[]>([]);
+  const [dbCanales, setDbCanales] = useState<CanalComunicacion[]>([]);
+  const [dbTipos, setDbTipos] = useState<TipificacionTipo[]>([]);
   const [tipificaciones, setTipificaciones] = useState<Tipificacion[]>([]);
   const [ciclosEstado, setCiclosEstado] = useState<CicloEstado[]>([]);
   const [filteredTipificaciones, setFilteredTipificaciones] = useState<Tipificacion[]>([]);
@@ -216,12 +224,75 @@ export function Tipificacion() {
     tipoUsuario: ''
   });
 
+  // Import state
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importProducto, setImportProducto] = useState('');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<{ rows: TipificacionImportRow[]; errors: string[]; warnings: string[] } | null>(null);
+
+  // CSV utility functions
+  const stripBOM = (text: string): string => {
+    if (text.charCodeAt(0) === 0xFEFF) return text.slice(1);
+    return text;
+  };
+
+  const detectDelimiter = (text: string): string => {
+    const firstLine = text.split(/\r?\n/)[0] || '';
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    return semicolonCount > commaCount ? ';' : ',';
+  };
+
+  // Normalize text for case-insensitive comparison preserving ñ and tildes
+  const normalizeForComparison = (s: string): string => {
+    return (s || '').trim().toUpperCase();
+  };
+
+  const parseCSV = (text: string): string[][] => {
+    const cleanText = stripBOM(text);
+    const delimiter = detectDelimiter(cleanText);
+    const lines = cleanText.split(/\r?\n/).filter(l => l.trim());
+    return lines.map(line => {
+      const row: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === delimiter && !inQuotes) {
+          row.push(current.trim());
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      row.push(current.trim());
+      return row;
+    });
+  };
+
+  const TIPIFICACION_CSV_COLUMNS = [
+    'CANAL_COMUNICACION', 'TIPO_TIPIFICACION', 'CODACCION', 'ACCION',
+    'CODRESULTADO', 'RESULTADO', 'RESULTADO1', 'RESULTADO2', 'RESULTADO3',
+    'RESULTADO4', 'RESULTADO5', 'DESTACADO', 'MOSTRAR_WEB', 'PESO', 'DISPONEREGLA'
+  ];
+
   useEffect(() => {
     loadProductos();
     loadTipificaciones();
     loadCiclosEstado();
     loadCamposNumericos();
     initializeSampleData();
+    loadDbProductos();
+    loadDbCanalesTipos();
   }, []);
 
   // Memoizar tipificaciones filtradas para evitar re-cálculos innecesarios
@@ -290,6 +361,28 @@ export function Tipificacion() {
     }
   };
 
+  const loadDbProductos = async () => {
+    try {
+      const productos = await db.getProductos();
+      setDbProductos(productos.filter((p: ProductoDB) => p.estado === 'activo'));
+    } catch (error) {
+      console.error('Error cargando productos:', error);
+    }
+  };
+
+  const loadDbCanalesTipos = async () => {
+    try {
+      const [canales, tipos] = await Promise.all([
+        db.getCanalComunicacion(),
+        db.getTipificacionTipo()
+      ]);
+      setDbCanales(canales);
+      setDbTipos(tipos);
+    } catch (error) {
+      console.error('Error cargando canales/tipos:', error);
+    }
+  };
+
   const loadTipificaciones = () => {
     const saved = localStorage.getItem('tipificaciones');
     if (saved) {
@@ -335,23 +428,54 @@ export function Tipificacion() {
     }
   };
 
-  const handleBuscar = () => {
+  const handleBuscar = async () => {
     // Validar que se hayan seleccionado los filtros
-    if (!filtroProducto || !filtroCanal) {
-      toast.error('Debe seleccionar Producto y Canal de Comunicación');
+    if (!filtroProducto) {
+      toast.error('Debe seleccionar un Producto');
+      return;
+    }
+    if (!filtroCanal) {
+      toast.error('Debe seleccionar un Canal de Comunicación');
       return;
     }
 
     setHasSearched(true);
-    
-    // Ejecutar el filtrado inmediatamente
-    let filtered = [...tipificaciones];
 
-    filtered = filtered.filter(t => t.productoId === filtroProducto);
-    filtered = filtered.filter(t => t.canalComunicacion === filtroCanal);
+    try {
+      // Fetch tipificaciones by product from the database
+      const records = await db.getTipificacionesByProducto(filtroProducto);
 
-    setFilteredTipificaciones(filtered);
-    toast.success('Búsqueda realizada');
+      // Filter by canal (case-insensitive, preserving ñ/tildes)
+      const canalNombre = filtroCanal.toUpperCase();
+      const filtered = records
+        .filter(r => r.canal_nombre.toUpperCase() === canalNombre)
+        .map(r => ({
+          id: r.idtipificacion,
+          productoId: filtroProducto,
+          canalComunicacion: r.canal_nombre,
+          tipoTipificacion: r.tipo_nombre,
+          codigoAccion: r.codaccion || '',
+          codigoResultado: r.codresultado || '',
+          accion: r.accion || '',
+          resultado: r.resultado || '',
+          resultado1: r.resultado1 || '',
+          resultado2: r.resultado2 || '',
+          resultado3: r.resultado3 || '',
+          resultado4: r.resultado4 || '',
+          resultado5: r.resultado5 || '',
+          tieneRazonNoPago: r.destacado === 'si',
+          peso: r.peso,
+          mostrar: r.mostrarweb === 'si',
+          estado: r.estado as 'activo' | 'inactivo',
+        }));
+
+      setFilteredTipificaciones(filtered);
+      toast.success(`Búsqueda realizada: ${filtered.length} tipificación(es) encontrada(s)`);
+    } catch (error: any) {
+      console.error('Error buscando tipificaciones:', error);
+      toast.error('Error al buscar tipificaciones');
+      setFilteredTipificaciones([]);
+    }
   };
 
   const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
@@ -558,8 +682,216 @@ export function Tipificacion() {
     // Código comentado para evitar errores de TypeScript con código inalcanzable
   };
 
+  // =============================================
+  // IMPORT TIPIFICACION
+  // =============================================
+  const handleDownloadTipificacionTemplate = () => {
+    const csv = `CANAL_COMUNICACION;TIPO_TIPIFICACION;CODACCION;ACCION;CODRESULTADO;RESULTADO;RESULTADO1;RESULTADO2;RESULTADO3;RESULTADO4;RESULTADO5;DESTACADO;MOSTRAR_WEB;PESO;DISPONEREGLA\nLLAMADA DE SALIDA;No Contacto;CA01;No contacto - cliente no contesta;CR01;Sin contacto;;;;;;;;;no;si;0;no\nLLAMADA DE SALIDA;Contacto con Titular;CA02;Contacto directo con titular;CR02;Compromiso de pago;;;;;;;;;si;si;1;no`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plantilla_tipificacion.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      if (!selectedFile.name.endsWith('.csv')) {
+        toast.error('Tipo de archivo no válido. Use archivos CSV.');
+        return;
+      }
+      setImportFile(selectedFile);
+      setImportPreview(null);
+    }
+  };
+
+  const handleImportPreview = async () => {
+    if (!importFile) { toast.error('Seleccione un archivo CSV'); return; }
+    if (!importProducto) { toast.error('Seleccione un producto'); return; }
+
+    try {
+      const text = await importFile.text();
+      const csvRows = parseCSV(text);
+
+      if (csvRows.length < 2) {
+        toast.error('El archivo no contiene filas de datos.');
+        return;
+      }
+
+      const headers = csvRows[0].map(h => h.toUpperCase().trim());
+      const errors: string[] = [];
+      const warnings: string[] = [];
+
+      // Validate required columns
+      const requiredCols = ['CANAL_COMUNICACION', 'TIPO_TIPIFICACION', 'RESULTADO'];
+      for (const req of requiredCols) {
+        if (!headers.includes(req)) {
+          errors.push(`Columna requerida faltante: ${req}`);
+        }
+      }
+      if (errors.length > 0) {
+        toast.error(errors.join('. '));
+        return;
+      }
+
+      // Build lookup sets for validation (case-insensitive, ñ/tildes preserved)
+      const canalNames = new Set(dbCanales.map(c => normalizeForComparison(c.nombre)));
+      const tipoNames = new Set(dbTipos.map(t => normalizeForComparison(t.nombre)));
+
+      const dataRows = csvRows.slice(1);
+      const parsed: TipificacionImportRow[] = [];
+      const seenInFile = new Set<string>();
+
+      dataRows.forEach((row, idx) => {
+        const obj: Record<string, string> = {};
+        headers.forEach((h, i) => { obj[h] = row[i]?.trim() || ''; });
+        const r = obj as unknown as TipificacionImportRow;
+
+        const canal = (r.CANAL_COMUNICACION || '').trim();
+        const tipo = (r.TIPO_TIPIFICACION || '').trim();
+        const resultado = (r.RESULTADO || '').trim();
+        const fila = idx + 2; // 1-based + header row
+
+        // Skip completely empty rows
+        if (!canal && !tipo && !resultado) return;
+
+        // Required field validation
+        if (!canal) {
+          errors.push(`Fila ${fila}: CANAL_COMUNICACION es obligatorio`);
+          return;
+        }
+        if (!tipo) {
+          errors.push(`Fila ${fila}: TIPO_TIPIFICACION es obligatorio`);
+          return;
+        }
+        if (!resultado) {
+          errors.push(`Fila ${fila}: RESULTADO es obligatorio`);
+          return;
+        }
+
+        // Validate canal exists in database
+        if (!canalNames.has(normalizeForComparison(canal))) {
+          errors.push(`Fila ${fila}: Canal "${canal}" no existe en la tabla canal_comunicacion`);
+          return;
+        }
+
+        // Validate tipo exists in database
+        if (!tipoNames.has(normalizeForComparison(tipo))) {
+          errors.push(`Fila ${fila}: Tipo "${tipo}" no existe en la tabla tipificacion_tipo`);
+          return;
+        }
+
+        // Check for duplicates within file (CANAL + TIPO + RESULTADO)
+        const dedupKey = `${normalizeForComparison(canal)}|${normalizeForComparison(tipo)}|${normalizeForComparison(resultado)}`;
+        if (seenInFile.has(dedupKey)) {
+          warnings.push(`Fila ${fila}: registro duplicado en el archivo (Canal: ${canal}, Tipo: ${tipo}, Resultado: ${resultado})`);
+        }
+        seenInFile.add(dedupKey);
+
+        // Validate DESTACADO, MOSTRAR_WEB, DISPONEREGLA values
+        if (r.DESTACADO && !['si', 'no'].includes(r.DESTACADO.toLowerCase())) {
+          warnings.push(`Fila ${fila}: DESTACADO debe ser 'si' o 'no' (valor: '${r.DESTACADO}')`);
+        }
+        if (r.MOSTRAR_WEB && !['si', 'no'].includes(r.MOSTRAR_WEB.toLowerCase())) {
+          warnings.push(`Fila ${fila}: MOSTRAR_WEB debe ser 'si' o 'no' (valor: '${r.MOSTRAR_WEB}')`);
+        }
+        if (r.DISPONEREGLA && !['si', 'no'].includes(r.DISPONEREGLA.toLowerCase())) {
+          warnings.push(`Fila ${fila}: DISPONEREGLA debe ser 'si' o 'no' (valor: '${r.DISPONEREGLA}')`);
+        }
+        if (r.PESO && isNaN(parseInt(r.PESO))) {
+          warnings.push(`Fila ${fila}: PESO debe ser un número (valor: '${r.PESO}')`);
+        }
+
+        parsed.push(r);
+      });
+
+      if (parsed.length === 0) {
+        toast.error(errors.length > 0 ? errors.join('. ') : 'No se encontraron registros válidos en el archivo.');
+        return;
+      }
+
+      setImportPreview({ rows: parsed, errors, warnings });
+    } catch (error: any) {
+      toast.error(error?.message || 'Error al procesar el archivo');
+    }
+  };
+
+  const handleImportExecute = async () => {
+    if (!importPreview || !importProducto) return;
+    if (!currentUser?.id) {
+      toast.error('Debe iniciar sesión para importar');
+      return;
+    }
+    const userId = currentUser.id;
+
+    try {
+      setImporting(true);
+      const result = await db.importTipificacion(
+        importProducto,
+        userId,
+        importPreview.rows
+      );
+
+      let msg = `Importación exitosa: ${result.inserted} tipificación(es) insertada(s).`;
+      if (result.skipped && result.skipped > 0) msg += ` ${result.skipped} duplicada(s) omitida(s).`;
+      if (result.warnings && result.warnings.length > 0) {
+        msg += ` Advertencias: ${result.warnings.length}`;
+      }
+      toast.success(msg);
+
+      // Refresh data from API
+      await loadTipificacionesFromDB();
+
+      // Reset import state
+      setShowImportDialog(false);
+      setImportPreview(null);
+      setImportFile(null);
+      setImportProducto('');
+      if (importFileRef.current) importFileRef.current.value = '';
+    } catch (error: any) {
+      toast.error(error?.message || 'Error al importar tipificaciones');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const loadTipificacionesFromDB = async () => {
+    try {
+      const records = await db.getTipificaciones();
+      const mapped: Tipificacion[] = records.map(r => ({
+        id: r.idtipificacion,
+        productoId: '',
+        canalComunicacion: r.canal_nombre,
+        tipoTipificacion: r.tipo_nombre,
+        codigoAccion: r.codaccion || '',
+        codigoResultado: r.codresultado || '',
+        accion: r.accion || '',
+        resultado: r.resultado || '',
+        resultado1: r.resultado1 || '',
+        resultado2: r.resultado2 || '',
+        resultado3: r.resultado3 || '',
+        resultado4: r.resultado4 || '',
+        resultado5: r.resultado5 || '',
+        tieneRazonNoPago: r.destacado === 'si',
+        peso: r.peso,
+        mostrar: r.mostrarweb === 'si',
+        estado: r.estado as 'activo' | 'inactivo',
+      }));
+      // Merge with existing localStorage data
+      const existing = tipificaciones;
+      const merged = [...existing, ...mapped.filter(m => !existing.some(e => e.id === m.id))];
+      setTipificaciones(merged);
+      saveTipificaciones(merged);
+    } catch (error: any) {
+      console.error('Error loading tipificaciones from DB:', error);
+    }
+  };
+
   return (
-    <Card className="border-2 border-sky-400 bg-gray-50">
+    <Card className="border-2 border-sky-400 bg-gray-50 w-fit mx-auto">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -592,8 +924,8 @@ export function Tipificacion() {
                 <SelectValue placeholder="Seleccione producto" />
               </SelectTrigger>
               <SelectContent>
-                {productos.map((producto) => (
-                  <SelectItem key={producto.id} value={producto.id}>
+                {dbProductos.map((producto) => (
+                  <SelectItem key={producto.idproducto} value={producto.idproducto}>
                     {producto.nombre}
                   </SelectItem>
                 ))}
@@ -615,9 +947,9 @@ export function Tipificacion() {
                 <SelectValue placeholder="Seleccione canal" />
               </SelectTrigger>
               <SelectContent>
-                {CANALES_COMUNICACION.map((canal) => (
-                  <SelectItem key={canal} value={canal}>
-                    {canal}
+                {dbCanales.map((canal) => (
+                  <SelectItem key={canal.idcanalcomunicacion} value={canal.nombre}>
+                    {canal.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -628,7 +960,11 @@ export function Tipificacion() {
             <Search className="w-3 h-3 mr-1" />
             Buscar
           </Button>
-          <div className="ml-auto">
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => { setImportProducto(''); setImportFile(null); setImportPreview(null); setShowImportDialog(true); }} className="h-7 text-xs px-3 border-sky-500 text-sky-600 hover:bg-sky-50">
+              <Upload className="w-3 h-3 mr-1" />
+              Importar
+            </Button>
             <Button size="sm" onClick={() => { resetForm(); setIsDialogOpen(true); }} className="h-7 text-xs px-3">
               <Plus className="w-3 h-3 mr-1" />
               Nueva Tipificación
@@ -681,9 +1017,9 @@ export function Tipificacion() {
                             <SelectValue placeholder="Seleccione canal" />
                           </SelectTrigger>
                           <SelectContent>
-                            {CANALES_COMUNICACION.map((canal) => (
-                              <SelectItem key={canal} value={canal}>
-                                {canal}
+                            {dbCanales.map((canal) => (
+                              <SelectItem key={canal.idcanalcomunicacion} value={canal.nombre}>
+                                {canal.nombre}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -702,9 +1038,9 @@ export function Tipificacion() {
                             <SelectValue placeholder="Seleccione tipo" />
                           </SelectTrigger>
                           <SelectContent>
-                            {TIPOS_TIPIFICACION.map((tipo) => (
-                              <SelectItem key={tipo} value={tipo}>
-                                {tipo}
+                            {dbTipos.map((tipo) => (
+                              <SelectItem key={tipo.idtipotipificacion} value={tipo.nombre}>
+                                {tipo.nombre}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -927,100 +1263,110 @@ export function Tipificacion() {
         </div>
 
         {/* Tabla de Tipificaciones */}
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
+        <div className="border rounded-lg overflow-x-auto max-w-full w-fit">
+          <Table className="w-fit" containerClassName="w-fit">
             <TableHeader>
               <TableRow className="bg-gray-200">
-                <TableHead className="font-semibold border-r border-gray-300">
-                  <div className="space-y-2">
+                <TableHead className="font-semibold whitespace-nowrap p-1 border-r border-gray-300">
+                  <div className="space-y-0.5">
                     <div>Tipo Tipificación</div>
                     <Input
                       placeholder="Filtrar..."
                       value={filtroTipoTipificacion}
                       onChange={(e) => setFiltroTipoTipificacion(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-7 text-xs"
                     />
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold border-r border-gray-300">
-                  <div className="space-y-2">
-                    <div>Código Acción</div>
+                <TableHead className="font-semibold whitespace-nowrap p-1 border-r border-gray-300">Canal</TableHead>
+                <TableHead className="font-semibold whitespace-nowrap p-1 border-r border-gray-300">
+                  <div className="space-y-0.5">
+                    <div>Cod. Acción</div>
                     <Input
                       placeholder="Filtrar..."
                       value={filtroCodigoAccion}
                       onChange={(e) => setFiltroCodigoAccion(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-7 text-xs"
                     />
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold border-r border-gray-300">
-                  <div className="space-y-2">
+                <TableHead className="font-semibold p-1 border-r border-gray-300 min-w-[120px]">
+                  <div className="space-y-0.5">
                     <div>Acción</div>
                     <Input
                       placeholder="Filtrar..."
                       value={filtroAccion}
                       onChange={(e) => setFiltroAccion(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-7 text-xs"
                     />
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold border-r border-gray-300">
-                  <div className="space-y-2">
-                    <div>Código Resultado</div>
+                <TableHead className="font-semibold whitespace-nowrap p-1 border-r border-gray-300">
+                  <div className="space-y-0.5">
+                    <div>Cod. Resultado</div>
                     <Input
                       placeholder="Filtrar..."
                       value={filtroCodigoResultado}
                       onChange={(e) => setFiltroCodigoResultado(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-7 text-xs"
                     />
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold border-r border-gray-300">
-                  <div className="space-y-2">
+                <TableHead className="font-semibold p-1 border-r border-gray-300 min-w-[140px]">
+                  <div className="space-y-0.5">
                     <div>Resultado</div>
                     <Input
                       placeholder="Filtrar..."
                       value={filtroResultado}
                       onChange={(e) => setFiltroResultado(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-7 text-xs"
                     />
                   </div>
                 </TableHead>
-                <TableHead className="font-semibold text-center border-r border-gray-300">Peso</TableHead>
-                <TableHead className="font-semibold text-center border-r border-gray-300">Mostrar</TableHead>
-                <TableHead className="font-semibold text-right">Acciones</TableHead>
+                <TableHead className="font-semibold text-center whitespace-nowrap p-1 border-r border-gray-300">Peso</TableHead>
+                <TableHead className="font-semibold text-center whitespace-nowrap p-1 border-r border-gray-300">Mostrar</TableHead>
+                <TableHead className="font-semibold text-center whitespace-nowrap p-1 border-r border-gray-300">Dest.</TableHead>
+                <TableHead className="font-semibold text-right whitespace-nowrap p-1">Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTipificaciones.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={10} className="text-center py-4 text-gray-500">
                     No hay tipificaciones configuradas
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredTipificaciones.map((tipificacion) => (
                   <TableRow key={tipificacion.id} className="border-b border-gray-300">
-                    <TableCell className="font-medium border-r border-gray-300">
+                    <TableCell className="font-medium whitespace-nowrap p-1 border-r border-gray-300">
                       {tipificacion.tipoTipificacion}
                     </TableCell>
-                    <TableCell className="border-r border-gray-300">{tipificacion.codigoAccion}</TableCell>
-                    <TableCell className="border-r border-gray-300">{tipificacion.accion}</TableCell>
-                    <TableCell className="border-r border-gray-300">{tipificacion.codigoResultado}</TableCell>
-                    <TableCell className="border-r border-gray-300">{tipificacion.resultado}</TableCell>
-                    <TableCell className="text-center border-r border-gray-300">
+                    <TableCell className="whitespace-nowrap p-1 border-r border-gray-300">{tipificacion.canalComunicacion}</TableCell>
+                    <TableCell className="whitespace-nowrap p-1 border-r border-gray-300">{tipificacion.codigoAccion}</TableCell>
+                    <TableCell className="p-1 border-r border-gray-300">{tipificacion.accion}</TableCell>
+                    <TableCell className="whitespace-nowrap p-1 border-r border-gray-300">{tipificacion.codigoResultado}</TableCell>
+                    <TableCell className="p-1 border-r border-gray-300">{tipificacion.resultado}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap p-1 border-r border-gray-300">
                       <span className="px-2 py-0.5 bg-gray-100 rounded font-medium">
                         {tipificacion.peso}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center border-r border-gray-300">
+                    <TableCell className="text-center whitespace-nowrap p-1 border-r border-gray-300">
                       {tipificacion.mostrar ? (
                         <span className="text-green-600 font-medium">SÍ</span>
                       ) : (
                         <span className="text-gray-400">NO</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-center whitespace-nowrap p-1 border-r border-gray-300">
+                      {tipificacion.tieneRazonNoPago ? (
+                        <span className="text-green-600 font-medium">SÍ</span>
+                      ) : (
+                        <span className="text-gray-400">NO</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right p-1">
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -1632,6 +1978,206 @@ export function Tipificacion() {
                 </div>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Import Dialog */}
+        <Dialog open={showImportDialog} onOpenChange={(open) => { setShowImportDialog(open); if (!open) { setImportPreview(null); } }}>
+          <DialogContent style={importPreview ? { width: 'fit-content', maxWidth: '95vw' } : undefined} className="text-xs max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-50 to-white">
+            <DialogHeader className="bg-gradient-to-r from-sky-100 to-indigo-100 -mx-6 -mt-6 px-4 py-2 rounded-t-lg mb-2 border-b border-sky-200">
+              <DialogTitle className="flex items-center gap-2">
+                <Upload className="w-4 h-4 text-sky-600" />
+                Importar Tipificaciones
+              </DialogTitle>
+              <DialogDescription>
+                Importe tipificaciones desde un archivo CSV para un producto seleccionado
+              </DialogDescription>
+            </DialogHeader>
+
+            {!importPreview ? (
+              <div className="space-y-4">
+                {/* Instructions */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="font-medium text-blue-800 mb-1">Instrucciones:</p>
+                  <ol className="list-decimal list-inside text-blue-700 space-y-0.5">
+                    <li>Seleccione el producto al que se asignarán las tipificaciones</li>
+                    <li>Descargue la plantilla CSV y complete los datos</li>
+                    <li>Seleccione el archivo CSV completado</li>
+                    <li>Haga clic en "Vista Previa" para verificar los datos</li>
+                  </ol>
+                  <p className="mt-1.5 text-blue-600">
+                    <strong>Separadores aceptados:</strong> punto y coma (;) o coma (,)
+                  </p>
+                </div>
+
+                {/* Product selector */}
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium text-slate-600">Producto *</Label>
+                  <Select value={importProducto} onValueChange={setImportProducto}>
+                    <SelectTrigger className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
+                      <SelectValue placeholder="Seleccione producto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dbProductos.map((producto) => (
+                        <SelectItem key={producto.idproducto} value={producto.idproducto}>
+                          {producto.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={handleDownloadTipificacionTemplate} className="h-7 text-xs">
+                    <FileSpreadsheet className="w-3 h-3 mr-1" />
+                    Descargar Plantilla
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()} className="h-7 text-xs">
+                    <Upload className="w-3 h-3 mr-1" />
+                    Seleccionar Archivo
+                  </Button>
+                </div>
+
+                {/* Hidden file input */}
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={handleImportFileChange}
+                />
+
+                {/* File info */}
+                {importFile && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+                    <p className="text-green-800">
+                      <strong>Archivo seleccionado:</strong> {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                  </div>
+                )}
+
+                {/* Columns reference */}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2">
+                  <p className="font-medium text-slate-600 mb-1">Columnas de la plantilla:</p>
+                  <p className="text-slate-500 break-all">{TIPIFICACION_CSV_COLUMNS.join(', ')}</p>
+                  <p className="text-slate-400 mt-1">Columnas obligatorias: <strong>CANAL_COMUNICACION, TIPO_TIPIFICACION</strong></p>
+                </div>
+
+                {/* Preview button */}
+                <Button
+                  onClick={handleImportPreview}
+                  disabled={!importFile || !importProducto}
+                  className="w-full !h-8"
+                >
+                  Vista Previa
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Preview header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-slate-700">
+                      {importPreview.rows.length} registro(s) encontrado(s)
+                    </p>
+                    {importPreview.warnings.length > 0 && (
+                      <p className="text-amber-600 text-xs">{importPreview.warnings.length} advertencia(s)</p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setImportPreview(null)}
+                    className="text-xs"
+                  >
+                    Cambiar archivo
+                  </Button>
+                </div>
+
+                {/* Warnings */}
+                {importPreview.warnings.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 max-h-24 overflow-y-auto">
+                    {importPreview.warnings.slice(0, 10).map((w, i) => (
+                      <p key={i} className="text-amber-800 text-xs">{w}</p>
+                    ))}
+                    {importPreview.warnings.length > 10 && (
+                      <p className="text-amber-600 text-xs mt-1">
+                        ... y {importPreview.warnings.length - 10} advertencia(s) más
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Preview table */}
+                <div className="border-2 border-slate-300 rounded-lg overflow-auto max-h-[50vh]">
+                  <Table className="w-fit" containerClassName="w-fit">
+                    <TableHeader>
+                      <TableRow className="bg-slate-200">
+                        <TableHead className="font-semibold text-xs whitespace-nowrap px-2">#</TableHead>
+                        <TableHead className="font-semibold text-xs whitespace-nowrap px-2">Canal</TableHead>
+                        <TableHead className="font-semibold text-xs whitespace-nowrap px-2">Tipo</TableHead>
+                        <TableHead className="font-semibold text-xs whitespace-nowrap px-2">Cod. Acción</TableHead>
+                        <TableHead className="font-semibold text-xs whitespace-nowrap px-2">Acción</TableHead>
+                        <TableHead className="font-semibold text-xs whitespace-nowrap px-2">Cod. Resultado</TableHead>
+                        <TableHead className="font-semibold text-xs whitespace-nowrap px-2">Resultado</TableHead>
+                        <TableHead className="font-semibold text-xs whitespace-nowrap px-2">Peso</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {importPreview.rows.slice(0, 50).map((r, i) => (
+                        <TableRow key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                          <TableCell className="text-xs px-2">{i + 1}</TableCell>
+                          <TableCell className="text-xs px-2 whitespace-nowrap">{r.CANAL_COMUNICACION}</TableCell>
+                          <TableCell className="text-xs px-2 whitespace-nowrap">{r.TIPO_TIPIFICACION}</TableCell>
+                          <TableCell className="text-xs px-2 whitespace-nowrap">{r.CODACCION}</TableCell>
+                          <TableCell className="text-xs px-2">{r.ACCION}</TableCell>
+                          <TableCell className="text-xs px-2 whitespace-nowrap">{r.CODRESULTADO}</TableCell>
+                          <TableCell className="text-xs px-2">{r.RESULTADO}</TableCell>
+                          <TableCell className="text-xs px-2 text-center">{r.PESO}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {importPreview.rows.length > 50 && (
+                  <p className="text-xs text-slate-500 text-center">
+                    Mostrando 50 de {importPreview.rows.length} registros
+                  </p>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setImportPreview(null); }}
+                    disabled={importing}
+                    className="h-8"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleImportExecute}
+                    disabled={importing}
+                    className="h-8 bg-sky-600 hover:bg-sky-700"
+                  >
+                    {importing ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        Importando...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3 h-3 mr-1" />
+                        Confirmar Importación
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </CardContent>

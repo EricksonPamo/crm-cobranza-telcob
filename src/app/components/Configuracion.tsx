@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Empresa } from './configuracion/Empresa';
 import { Producto } from './configuracion/Producto';
 import { Base } from './configuracion/Base';
@@ -10,6 +10,18 @@ import { Building2, Package, Database, Upload, FileText, Tags } from 'lucide-rea
 
 export function Configuracion() {
   const [activeTab, setActiveTab] = useState('empresa');
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'empresa': return <Empresa />;
+      case 'producto': return <Producto />;
+      case 'base': return <Base />;
+      case 'cargue': return <CargueModule />;
+      case 'plantilla': return <Plantilla />;
+      case 'tipificacion': return <Tipificacion />;
+      default: return <Empresa />;
+    }
+  };
 
   return (
     <div className="p-8">
@@ -32,29 +44,9 @@ export function Configuracion() {
           <TabsTrigger value="tipificacion" className="gap-1.5 data-[state=active]:bg-white"><Tags className="w-4 h-4" />Tipificación</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="empresa" className="space-y-6">
-          {activeTab === 'empresa' && <Empresa />}
-        </TabsContent>
-
-        <TabsContent value="producto" className="space-y-6">
-          {activeTab === 'producto' && <Producto />}
-        </TabsContent>
-
-        <TabsContent value="base" className="space-y-6">
-          {activeTab === 'base' && <Base />}
-        </TabsContent>
-
-        <TabsContent value="cargue" className="space-y-6">
-          {activeTab === 'cargue' && <CargueModule />}
-        </TabsContent>
-
-        <TabsContent value="plantilla" className="space-y-6">
-          {activeTab === 'plantilla' && <Plantilla />}
-        </TabsContent>
-
-        <TabsContent value="tipificacion" className="space-y-6">
-          {activeTab === 'tipificacion' && <Tipificacion />}
-        </TabsContent>
+        <div className="space-y-6">
+          {renderContent()}
+        </div>
       </Tabs>
     </div>
   );

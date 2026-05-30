@@ -194,7 +194,7 @@ export function Empresa() {
   }
 
   return (
-    <Card className="border-2 border-sky-400 bg-gray-50">
+    <Card className="border-2 border-sky-400 bg-gray-50 max-w-[60%] mx-auto">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
