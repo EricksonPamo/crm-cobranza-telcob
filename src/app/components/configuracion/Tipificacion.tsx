@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { Checkbox } from '../ui/checkbox';
 import { useDatabase } from '../../context/DatabaseContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { TipificacionImportRow, Producto as ProductoDB, CanalComunicacion, TipificacionTipo } from '../../lib/db';
+import { TipificacionImportRow, Producto as ProductoDB, CanalComunicacion, TipificacionTipo, RazonNoPago } from '../../lib/db';
 
 interface Producto {
   id: string;
@@ -69,6 +69,7 @@ interface Tipificacion {
   resultado4: string;
   resultado5: string;
   tieneRazonNoPago: boolean;
+  destacado: boolean;
   peso: number;
   mostrar: boolean;
   estado: 'activo' | 'inactivo';
@@ -146,6 +147,8 @@ export function Tipificacion() {
   const [dbProductos, setDbProductos] = useState<ProductoDB[]>([]);
   const [dbCanales, setDbCanales] = useState<CanalComunicacion[]>([]);
   const [dbTipos, setDbTipos] = useState<TipificacionTipo[]>([]);
+  const [razonesNoPago, setRazonesNoPago] = useState<RazonNoPago[]>([]);
+  const [selectedRazones, setSelectedRazones] = useState<string[]>([]);
   const [tipificaciones, setTipificaciones] = useState<Tipificacion[]>([]);
   const [ciclosEstado, setCiclosEstado] = useState<CicloEstado[]>([]);
   const [filteredTipificaciones, setFilteredTipificaciones] = useState<Tipificacion[]>([]);
@@ -196,8 +199,9 @@ export function Tipificacion() {
     resultado4: '',
     resultado5: '',
     tieneRazonNoPago: false,
+    destacado: false,
     peso: 0,
-    mostrar: true,
+    mostrar: false,
     estado: 'activo',
     maxCuotas: 3,
   });
@@ -293,6 +297,7 @@ export function Tipificacion() {
     initializeSampleData();
     loadDbProductos();
     loadDbCanalesTipos();
+    loadRazonesNoPago();
   }, []);
 
   // Memoizar tipificaciones filtradas para evitar re-cálculos innecesarios
@@ -383,6 +388,15 @@ export function Tipificacion() {
     }
   };
 
+  const loadRazonesNoPago = async () => {
+    try {
+      const razones = await db.getRazonNoPago();
+      setRazonesNoPago(razones);
+    } catch (error) {
+      console.error('Error cargando razones no pago:', error);
+    }
+  };
+
   const loadTipificaciones = () => {
     const saved = localStorage.getItem('tipificaciones');
     if (saved) {
@@ -463,7 +477,8 @@ export function Tipificacion() {
           resultado3: r.resultado3 || '',
           resultado4: r.resultado4 || '',
           resultado5: r.resultado5 || '',
-          tieneRazonNoPago: r.destacado === 'si',
+          tieneRazonNoPago: r.tienerazonnopago || false,
+          destacado: r.destacado === 'si',
           peso: r.peso,
           mostrar: r.mostrarweb === 'si',
           estado: r.estado as 'activo' | 'inactivo',
@@ -478,25 +493,57 @@ export function Tipificacion() {
     }
   };
 
-  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (editingTipificacion) {
-      const updated = tipificaciones.map((t) =>
-        t.id === editingTipificacion.id ? { ...editingTipificacion, ...formData } as Tipificacion : t
-      );
-      saveTipificaciones(updated);
-      toast.success('Tipificación actualizada correctamente');
-    } else {
-      const newTipificacion: Tipificacion = {
-        id: Date.now().toString(),
-        ...formData as Omit<Tipificacion, 'id'>,
-      };
-      saveTipificaciones([...tipificaciones, newTipificacion]);
-      toast.success('Tipificación creada correctamente');
-    }
+    if (!formData.productoId) { toast.error('Seleccione un producto'); return; }
+    if (!formData.canalComunicacion) { toast.error('Seleccione un canal de comunicación'); return; }
+    if (!formData.tipoTipificacion) { toast.error('Seleccione un tipo de tipificación'); return; }
+    if (!formData.resultado) { toast.error('Ingrese un resultado'); return; }
 
-    resetForm();
+    try {
+      const userId = currentUser?.id;
+      if (!userId) { toast.error('Debe iniciar sesión'); return; }
+
+      // Find the DB ids for canal and tipo
+      const canal = dbCanales.find(c => c.nombre === formData.canalComunicacion);
+      const tipo = dbTipos.find(t => t.nombre === formData.tipoTipificacion);
+      if (!canal) { toast.error('Canal de comunicación no encontrado'); return; }
+      if (!tipo) { toast.error('Tipo de tipificación no encontrado'); return; }
+
+      await db.createTipificacion({
+        idcanalcomunicacion: canal.idcanalcomunicacion,
+        idtipotipificacion: tipo.idtipotipificacion,
+        codaccion: formData.codigoAccion || undefined,
+        accion: formData.accion || undefined,
+        codresultado: formData.codigoResultado || undefined,
+        resultado: formData.resultado || undefined,
+        resultado1: formData.resultado1 || undefined,
+        resultado2: formData.resultado2 || undefined,
+        resultado3: formData.resultado3 || undefined,
+        resultado4: formData.resultado4 || undefined,
+        resultado5: formData.resultado5 || undefined,
+        destacado: formData.destacado ? 'si' : 'no',
+        mostrarweb: formData.mostrar ? 'si' : 'no',
+        peso: formData.peso || 0,
+        disponeregla: 'no',
+        tienerazonnopago: formData.tieneRazonNoPago || false,
+        idusuario: userId,
+        estado: formData.estado || 'activo',
+        razonesNoPago: formData.tieneRazonNoPago ? selectedRazones : [],
+      });
+
+      toast.success('Tipificación creada correctamente');
+      resetForm();
+
+      // Refresh the list if search was already performed
+      if (hasSearched && filtroProducto && filtroCanal) {
+        await handleBuscar();
+      }
+    } catch (error: any) {
+      console.error('Error guardando tipificación:', error);
+      toast.error(error?.message || 'Error al guardar la tipificación');
+    }
   };
 
   const handleEdit = (tipificacion: Tipificacion) => {
@@ -627,11 +674,13 @@ export function Tipificacion() {
       resultado4: '',
       resultado5: '',
       tieneRazonNoPago: false,
+      destacado: false,
       peso: 0,
-      mostrar: true,
+      mostrar: false,
       estado: 'activo',
       maxCuotas: 3,
     });
+    setSelectedRazones([]);
     setEditingTipificacion(null);
     setIsDialogOpen(false);
   };
@@ -875,11 +924,12 @@ export function Tipificacion() {
         resultado3: r.resultado3 || '',
         resultado4: r.resultado4 || '',
         resultado5: r.resultado5 || '',
-        tieneRazonNoPago: r.destacado === 'si',
-        peso: r.peso,
-        mostrar: r.mostrarweb === 'si',
-        estado: r.estado as 'activo' | 'inactivo',
-      }));
+        tieneRazonNoPago: r.tienerazonnopago || false,
+          destacado: r.destacado === 'si',
+          peso: r.peso,
+          mostrar: r.mostrarweb === 'si',
+          estado: r.estado as 'activo' | 'inactivo',
+        }));
       // Merge with existing localStorage data
       const existing = tipificaciones;
       const merged = [...existing, ...mapped.filter(m => !existing.some(e => e.id === m.id))];
@@ -996,8 +1046,8 @@ export function Tipificacion() {
                             <SelectValue placeholder="Seleccione producto" />
                           </SelectTrigger>
                           <SelectContent>
-                            {productos.map((producto) => (
-                              <SelectItem key={producto.id} value={producto.id}>
+                            {dbProductos.map((producto) => (
+                              <SelectItem key={producto.idproducto} value={producto.idproducto}>
                                 {producto.nombre}
                               </SelectItem>
                             ))}
@@ -1183,17 +1233,17 @@ export function Tipificacion() {
                         />
                       </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-slate-600">Tiene razón de no pago</Label>
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-xs font-medium text-slate-600">Razón No Pago</Label>
                         <div className="flex items-center gap-4 h-7">
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="radio"
                               name="razonNoPago"
                               checked={formData.tieneRazonNoPago === true}
-                              onChange={() =>
-                                setFormData({ ...formData, tieneRazonNoPago: true })
-                              }
+                              onChange={() => {
+                                setFormData({ ...formData, tieneRazonNoPago: true });
+                              }}
                               className="w-4 h-4"
                             />
                             <span>SÍ</span>
@@ -1203,8 +1253,61 @@ export function Tipificacion() {
                               type="radio"
                               name="razonNoPago"
                               checked={formData.tieneRazonNoPago === false}
+                              onChange={() => {
+                                setFormData({ ...formData, tieneRazonNoPago: false });
+                                setSelectedRazones([]);
+                              }}
+                              className="w-4 h-4"
+                            />
+                            <span>NO</span>
+                          </label>
+                        </div>
+                        {formData.tieneRazonNoPago && (
+                          <div className="flex flex-wrap gap-3 bg-sky-50 border border-sky-200 rounded-lg p-2 mt-1">
+                            {razonesNoPago.map((razon) => (
+                              <label key={razon.idrazonnopago} className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox
+                                  checked={selectedRazones.includes(razon.idrazonnopago)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedRazones([...selectedRazones, razon.idrazonnopago]);
+                                    } else {
+                                      setSelectedRazones(selectedRazones.filter(id => id !== razon.idrazonnopago));
+                                    }
+                                  }}
+                                />
+                                <span className="text-xs text-slate-700">{razon.nombre}</span>
+                              </label>
+                            ))}
+                            {razonesNoPago.length === 0 && (
+                              <span className="text-xs text-slate-400">No hay razones de no pago configuradas</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium text-slate-600">Destacado</Label>
+                        <div className="flex items-center gap-4 h-7">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="destacado"
+                              checked={formData.destacado === true}
                               onChange={() =>
-                                setFormData({ ...formData, tieneRazonNoPago: false })
+                                setFormData({ ...formData, destacado: true })
+                              }
+                              className="w-4 h-4"
+                            />
+                            <span>SÍ</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="destacado"
+                              checked={formData.destacado === false}
+                              onChange={() =>
+                                setFormData({ ...formData, destacado: false })
                               }
                               className="w-4 h-4"
                             />

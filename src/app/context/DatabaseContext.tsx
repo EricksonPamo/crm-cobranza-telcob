@@ -78,11 +78,16 @@ import {
   TipificacionRecord,
   TipificacionImportRow,
   TipificacionImportResult,
+  TipificacionRazonNoPago,
+  RazonNoPago,
   getCanalComunicacion,
   getTipificacionTipo,
   getTipificaciones,
   getTipificacionesByProducto,
   importTipificacion,
+  createTipificacion,
+  getTipificacionRazonesNoPago,
+  getRazonNoPago,
 } from '../lib/db';
 
 interface DatabaseContextType {
@@ -145,6 +150,29 @@ interface DatabaseContextType {
   getTipificaciones: () => Promise<TipificacionRecord[]>;
   getTipificacionesByProducto: (idproducto: string) => Promise<TipificacionRecord[]>;
   importTipificacion: (idproducto: string, idusuario: string, rows: TipificacionImportRow[]) => Promise<TipificacionImportResult>;
+  createTipificacion: (data: {
+    idcanalcomunicacion: string;
+    idtipotipificacion: string;
+    codaccion?: string;
+    accion?: string;
+    codresultado?: string;
+    resultado?: string;
+    resultado1?: string;
+    resultado2?: string;
+    resultado3?: string;
+    resultado4?: string;
+    resultado5?: string;
+    destacado?: string;
+    mostrarweb?: string;
+    peso?: number;
+    disponeregla?: string;
+    tienerazonnopago?: boolean;
+    idusuario: string;
+    estado?: string;
+    razonesNoPago?: string[];
+  }) => Promise<TipificacionRecord>;
+  getTipificacionRazonesNoPago: (idtipificacion: string) => Promise<TipificacionRazonNoPago[]>;
+  getRazonNoPago: () => Promise<RazonNoPago[]>;
 }
 
 const DatabaseContext = createContext<DatabaseContextType | null>(null);
@@ -173,6 +201,9 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     getTipificaciones,
     getTipificacionesByProducto,
     importTipificacion,
+    createTipificacion,
+    getTipificacionRazonesNoPago,
+    getRazonNoPago,
   };
 
   return (

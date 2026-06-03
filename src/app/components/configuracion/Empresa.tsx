@@ -190,7 +190,7 @@ export function Empresa() {
   const empresasPaginadas = filteredEmpresas.slice(indiceInicio, indiceInicio + registrosPorPagina);
 
   if (loading) {
-    return <Card className="border-2 border-sky-400 bg-gray-50"><CardContent className="py-12 text-center text-gray-500">Cargando empresas...</CardContent></Card>;
+    return <Card className="border-2 border-sky-400 bg-gray-50 max-w-[60%] mx-auto"><CardContent className="py-12 text-center text-gray-500">Cargando empresas...</CardContent></Card>;
   }
 
   return (

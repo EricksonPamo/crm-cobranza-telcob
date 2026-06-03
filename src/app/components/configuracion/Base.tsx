@@ -197,7 +197,7 @@ export function Base() {
   const productosActivos = productos.filter((p) => p.estado === 'activo');
 
   if (loading) {
-    return <Card className="border-2 border-sky-400 bg-gray-50"><CardContent className="py-12 text-center text-gray-500">Cargando bases...</CardContent></Card>;
+    return <Card className="border-2 border-sky-400 bg-gray-50 max-w-[60%] mx-auto"><CardContent className="py-12 text-center text-gray-500">Cargando bases...</CardContent></Card>;
   }
 
   return (

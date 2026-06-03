@@ -468,7 +468,7 @@ export function Plantilla() {
   };
 
   return (
-    <Card className="border-2 border-sky-400 bg-gray-50">
+    <Card className={`border-2 border-sky-400 bg-gray-50 ${busquedaRealizada ? '' : 'max-w-[60%] mx-auto'}`}>
       <CardHeader>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">

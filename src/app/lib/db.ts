@@ -587,6 +587,24 @@ export async function getBasesByProducto(idproducto: string) {
 }
 
 // =====================================================
+// RAZON NO PAGO
+// =====================================================
+
+export interface RazonNoPago {
+  idrazonnopago: string;
+  nombre: string;
+  fechacreacion: string;
+  idusuario: string;
+  fechamodificacion: string | null;
+  idusuariomod: string;
+  estado: string;
+}
+
+export async function getRazonNoPago() {
+  return apiFetch<RazonNoPago[]>('/razon-nopago');
+}
+
+// =====================================================
 // CANAL COMUNICACION
 // =====================================================
 
@@ -647,6 +665,7 @@ export interface TipificacionRecord {
   mostrarweb: string;
   peso: number;
   disponeregla: string;
+  tienerazonnopago: boolean;
   fechacreacion: string;
   idusuario: string;
   fechamodificacion: string | null;
@@ -695,4 +714,41 @@ export async function importTipificacion(
   rows: TipificacionImportRow[]
 ): Promise<TipificacionImportResult> {
   return apiPost<TipificacionImportResult>('/tipificacion/import', { idproducto, idusuario, rows });
+}
+
+export interface TipificacionRazonNoPago {
+  idtipificacion: string;
+  idrazonnopago: string;
+  razon_nombre: string;
+  fechacreacion: string;
+  idusuario: string;
+  estado: string;
+}
+
+export async function createTipificacion(data: {
+  idcanalcomunicacion: string;
+  idtipotipificacion: string;
+  codaccion?: string;
+  accion?: string;
+  codresultado?: string;
+  resultado?: string;
+  resultado1?: string;
+  resultado2?: string;
+  resultado3?: string;
+  resultado4?: string;
+  resultado5?: string;
+  destacado?: string;
+  mostrarweb?: string;
+  peso?: number;
+  disponeregla?: string;
+  tienerazonnopago?: boolean;
+  idusuario: string;
+  estado?: string;
+  razonesNoPago?: string[];
+}) {
+  return apiPost<TipificacionRecord>('/tipificacion', data);
+}
+
+export async function getTipificacionRazonesNoPago(idtipificacion: string) {
+  return apiFetch<TipificacionRazonNoPago[]>(`/tipificacion-razonnopago/${idtipificacion}`);
 }

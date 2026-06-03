@@ -1075,6 +1075,92 @@ app.get('/api/campanas/by-cargue/:idcargue', async (req, res) => {
 });
 
 // =====================================================
+// RAZON NO PAGO
+// =====================================================
+app.get('/api/razon-nopago', async (req, res) => {
+  try {
+    const rows = await q('SELECT * FROM razon_nopago WHERE estado = $1 ORDER BY nombre', ['activo']);
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// TIPIFICACION - CREATE SINGLE
+// =====================================================
+app.post('/api/tipificacion', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const d = req.body;
+    await client.query('BEGIN');
+
+    const rows = await client.query(
+      `INSERT INTO tipificacion
+        (idcanalcomunicacion, idtipotipificacion, codaccion, accion,
+         codresultado, resultado, resultado1, resultado2, resultado3,
+         resultado4, resultado5, destacado, mostrarweb, peso,
+         disponeregla, tienerazonnopago, idusuario, idusuariomod, estado)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17, $18)
+       RETURNING *`,
+      [d.idcanalcomunicacion, d.idtipotipificacion, d.codaccion || null, d.accion || null,
+       d.codresultado || null, d.resultado || null,
+       d.resultado1 || null, d.resultado2 || null, d.resultado3 || null,
+       d.resultado4 || null, d.resultado5 || null,
+       d.destacado || 'no', d.mostrarweb || 'si', d.peso || 0,
+       d.disponeregla || 'no', d.tienerazonnopago || false,
+       d.idusuario, d.estado || 'activo']
+    );
+    const tipificacion = rows.rows[0];
+
+    // Save razon_nopago relationships if any
+    if (d.razonesNoPago && Array.isArray(d.razonesNoPago) && d.razonesNoPago.length > 0) {
+      for (const idrazonnopago of d.razonesNoPago) {
+        await client.query(
+          `INSERT INTO tipificacion_razonnopago (idtipificacion, idrazonnopago, idusuario, estado)
+           VALUES ($1, $2, $3, $4)`,
+          [tipificacion.idtipificacion, idrazonnopago, d.idusuario, 'activo']
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json(tipificacion);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// =====================================================
+// TIPIFICACION RAZON NO PAGO
+// =====================================================
+app.post('/api/tipificacion-razonnopago', async (req, res) => {
+  try {
+    const { idtipificacion, idrazonnopago, idusuario } = req.body;
+    await q(
+      `INSERT INTO tipificacion_razonnopago (idtipificacion, idrazonnopago, idusuario, estado)
+       VALUES ($1, $2, $3, $4) ON CONFLICT (idtipificacion, idrazonnopago) DO NOTHING`,
+      [idtipificacion, idrazonnopago, idusuario, 'activo']
+    );
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/api/tipificacion-razonnopago/:idtipificacion', async (req, res) => {
+  try {
+    const rows = await q(
+      `SELECT tr.*, rnp.nombre as razon_nombre
+       FROM tipificacion_razonnopago tr
+       JOIN razon_nopago rnp ON tr.idrazonnopago = rnp.idrazonnopago
+       WHERE tr.idtipificacion = $1 AND tr.estado = $2`,
+      [req.params.idtipificacion, 'activo']
+    );
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
 // CANAL COMUNICACION
 // =====================================================
 app.get('/api/canal-comunicacion', async (req, res) => {

@@ -867,7 +867,7 @@ export function CargueModule() {
 
   if (loading) {
     return (
-      <Card className="border-2 border-sky-400 bg-gray-50">
+      <Card className="border-2 border-sky-400 bg-gray-50 max-w-[60%] mx-auto">
         <CardContent className="py-12 text-center text-gray-500">
           <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-sky-600" />
           Cargando...
@@ -877,7 +877,7 @@ export function CargueModule() {
   }
 
   return (
-    <Card className="border-2 border-sky-400 bg-gray-50">
+    <Card className="border-2 border-sky-400 bg-gray-50 max-w-[60%] mx-auto">
       <CardHeader>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
