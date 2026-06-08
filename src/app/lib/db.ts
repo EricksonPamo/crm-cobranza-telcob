@@ -605,6 +605,41 @@ export async function getRazonNoPago() {
 }
 
 // =====================================================
+// VINCULO
+// =====================================================
+
+export interface Vinculo {
+  idvinculo: string;
+  nombre: string;
+  fechacreacion: string;
+  idusuario: string;
+  fechamodificacion: string | null;
+  idusuariomod: string;
+  estado: string;
+}
+
+export async function getVinculos() {
+  return apiFetch<Vinculo[]>('/vinculos');
+}
+
+// =====================================================
+// TIPIFICACION VINCULO
+// =====================================================
+
+export interface TipificacionVinculo {
+  idtipificacion: string;
+  idvinculo: string;
+  vinculo_nombre: string;
+  fechacreacion: string;
+  idusuario: string;
+  estado: string;
+}
+
+export async function getTipificacionVinculos(idtipificacion: string) {
+  return apiFetch<TipificacionVinculo[]>(`/tipificacion-vinculo/${idtipificacion}`);
+}
+
+// =====================================================
 // CANAL COMUNICACION
 // =====================================================
 
@@ -745,6 +780,7 @@ export async function createTipificacion(data: {
   idusuario: string;
   estado?: string;
   razonesNoPago?: string[];
+  vinculos?: string[];
 }) {
   return apiPost<TipificacionRecord>('/tipificacion', data);
 }

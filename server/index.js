@@ -1075,6 +1075,44 @@ app.get('/api/campanas/by-cargue/:idcargue', async (req, res) => {
 });
 
 // =====================================================
+// VINCULO
+// =====================================================
+app.get('/api/vinculos', async (req, res) => {
+  try {
+    const rows = await q('SELECT * FROM vinculo WHERE estado = $1 ORDER BY nombre', ['activo']);
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
+// TIPIFICACION VINCULO
+// =====================================================
+app.post('/api/tipificacion-vinculo', async (req, res) => {
+  try {
+    const { idtipificacion, idvinculo, idusuario } = req.body;
+    await q(
+      `INSERT INTO tipificacion_vinculo (idtipificacion, idvinculo, idusuario, estado)
+       VALUES ($1, $2, $3, $4) ON CONFLICT (idtipificacion, idvinculo) DO NOTHING`,
+      [idtipificacion, idvinculo, idusuario, 'activo']
+    );
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.get('/api/tipificacion-vinculo/:idtipificacion', async (req, res) => {
+  try {
+    const rows = await q(
+      `SELECT tv.*, v.nombre as vinculo_nombre
+       FROM tipificacion_vinculo tv
+       JOIN vinculo v ON tv.idvinculo = v.idvinculo
+       WHERE tv.idtipificacion = $1 AND tv.estado = $2`,
+      [req.params.idtipificacion, 'activo']
+    );
+    res.json(rows);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// =====================================================
 // RAZON NO PAGO
 // =====================================================
 app.get('/api/razon-nopago', async (req, res) => {
@@ -1118,6 +1156,17 @@ app.post('/api/tipificacion', async (req, res) => {
           `INSERT INTO tipificacion_razonnopago (idtipificacion, idrazonnopago, idusuario, estado)
            VALUES ($1, $2, $3, $4)`,
           [tipificacion.idtipificacion, idrazonnopago, d.idusuario, 'activo']
+        );
+      }
+    }
+
+    // Save vinculo relationships if any
+    if (d.vinculos && Array.isArray(d.vinculos) && d.vinculos.length > 0) {
+      for (const idvinculo of d.vinculos) {
+        await client.query(
+          `INSERT INTO tipificacion_vinculo (idtipificacion, idvinculo, idusuario, estado)
+           VALUES ($1, $2, $3, $4) ON CONFLICT (idtipificacion, idvinculo) DO NOTHING`,
+          [tipificacion.idtipificacion, idvinculo, d.idusuario, 'activo']
         );
       }
     }

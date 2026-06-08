@@ -30,7 +30,7 @@ import { toast } from 'sonner';
 import { Checkbox } from '../ui/checkbox';
 import { useDatabase } from '../../context/DatabaseContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { TipificacionImportRow, Producto as ProductoDB, CanalComunicacion, TipificacionTipo, RazonNoPago } from '../../lib/db';
+import { TipificacionImportRow, Producto as ProductoDB, CanalComunicacion, TipificacionTipo, RazonNoPago, Vinculo } from '../../lib/db';
 
 interface Producto {
   id: string;
@@ -69,6 +69,7 @@ interface Tipificacion {
   resultado4: string;
   resultado5: string;
   tieneRazonNoPago: boolean;
+  tieneVinculo: boolean;
   destacado: boolean;
   peso: number;
   mostrar: boolean;
@@ -149,6 +150,8 @@ export function Tipificacion() {
   const [dbTipos, setDbTipos] = useState<TipificacionTipo[]>([]);
   const [razonesNoPago, setRazonesNoPago] = useState<RazonNoPago[]>([]);
   const [selectedRazones, setSelectedRazones] = useState<string[]>([]);
+  const [vinculos, setVinculos] = useState<Vinculo[]>([]);
+  const [selectedVinculos, setSelectedVinculos] = useState<string[]>([]);
   const [tipificaciones, setTipificaciones] = useState<Tipificacion[]>([]);
   const [ciclosEstado, setCiclosEstado] = useState<CicloEstado[]>([]);
   const [filteredTipificaciones, setFilteredTipificaciones] = useState<Tipificacion[]>([]);
@@ -199,6 +202,7 @@ export function Tipificacion() {
     resultado4: '',
     resultado5: '',
     tieneRazonNoPago: false,
+    tieneVinculo: false,
     destacado: false,
     peso: 0,
     mostrar: false,
@@ -298,6 +302,7 @@ export function Tipificacion() {
     loadDbProductos();
     loadDbCanalesTipos();
     loadRazonesNoPago();
+    loadVinculos();
   }, []);
 
   // Memoizar tipificaciones filtradas para evitar re-cálculos innecesarios
@@ -346,7 +351,8 @@ export function Tipificacion() {
       );
     }
 
-    return filtered;
+    // Ordenar por peso de mayor a menor
+    return filtered.sort((a, b) => (b.peso || 0) - (a.peso || 0));
   }, [tipificaciones, filtroProducto, filtroCanal, hasSearched, filtroTipoTipificacion, filtroCodigoAccion, filtroAccion, filtroCodigoResultado, filtroResultado]);
 
   useEffect(() => {
@@ -394,6 +400,15 @@ export function Tipificacion() {
       setRazonesNoPago(razones);
     } catch (error) {
       console.error('Error cargando razones no pago:', error);
+    }
+  };
+
+  const loadVinculos = async () => {
+    try {
+      const vinculosData = await db.getVinculos();
+      setVinculos(vinculosData);
+    } catch (error) {
+      console.error('Error cargando vínculos:', error);
     }
   };
 
@@ -482,7 +497,8 @@ export function Tipificacion() {
           peso: r.peso,
           mostrar: r.mostrarweb === 'si',
           estado: r.estado as 'activo' | 'inactivo',
-        }));
+        }))
+        .sort((a, b) => (b.peso || 0) - (a.peso || 0));
 
       setFilteredTipificaciones(filtered);
       toast.success(`Búsqueda realizada: ${filtered.length} tipificación(es) encontrada(s)`);
@@ -531,6 +547,7 @@ export function Tipificacion() {
         idusuario: userId,
         estado: formData.estado || 'activo',
         razonesNoPago: formData.tieneRazonNoPago ? selectedRazones : [],
+        vinculos: formData.tieneVinculo ? selectedVinculos : [],
       });
 
       toast.success('Tipificación creada correctamente');
@@ -674,6 +691,7 @@ export function Tipificacion() {
       resultado4: '',
       resultado5: '',
       tieneRazonNoPago: false,
+      tieneVinculo: false,
       destacado: false,
       peso: 0,
       mostrar: false,
@@ -681,6 +699,7 @@ export function Tipificacion() {
       maxCuotas: 3,
     });
     setSelectedRazones([]);
+    setSelectedVinculos([]);
     setEditingTipificacion(null);
     setIsDialogOpen(false);
   };
@@ -1080,9 +1099,18 @@ export function Tipificacion() {
                         <Label htmlFor="tipo" className="text-xs font-medium text-slate-600">Tipo Tipificación *</Label>
                         <Select
                           value={formData.tipoTipificacion}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, tipoTipificacion: value })
-                          }
+                          onValueChange={(value) => {
+                            const newData: Partial<Tipificacion> = { ...formData, tipoTipificacion: value };
+                            if (value !== 'No Contacto') {
+                              newData.tieneRazonNoPago = false;
+                              setSelectedRazones([]);
+                            }
+                            if (value !== 'Contacto Indirecto') {
+                              newData.tieneVinculo = false;
+                              setSelectedVinculos([]);
+                            }
+                            setFormData(newData);
+                          }}
                         >
                           <SelectTrigger id="tipo" className="!h-7 !py-1 text-xs border-sky-500 focus:border-sky-600">
                             <SelectValue placeholder="Seleccione tipo" />
@@ -1233,6 +1261,7 @@ export function Tipificacion() {
                         />
                       </div>
 
+                      {formData.tipoTipificacion === 'No Contacto' && (
                       <div className="space-y-1 col-span-2">
                         <Label className="text-xs font-medium text-slate-600">Razón No Pago</Label>
                         <div className="flex items-center gap-4 h-7">
@@ -1285,6 +1314,62 @@ export function Tipificacion() {
                           </div>
                         )}
                       </div>
+                      )}
+
+                      {formData.tipoTipificacion === 'Contacto Indirecto' && (
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-xs font-medium text-slate-600">Vínculo</Label>
+                        <div className="flex items-center gap-4 h-7">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="vinculo"
+                              checked={formData.tieneVinculo === true}
+                              onChange={() => {
+                                setFormData({ ...formData, tieneVinculo: true });
+                              }}
+                              className="w-4 h-4"
+                            />
+                            <span>SÍ</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="vinculo"
+                              checked={formData.tieneVinculo === false}
+                              onChange={() => {
+                                setFormData({ ...formData, tieneVinculo: false });
+                                setSelectedVinculos([]);
+                              }}
+                              className="w-4 h-4"
+                            />
+                            <span>NO</span>
+                          </label>
+                        </div>
+                        {formData.tieneVinculo && (
+                          <div className="flex flex-wrap gap-3 bg-sky-50 border border-sky-200 rounded-lg p-2 mt-1">
+                            {vinculos.map((vinculo) => (
+                              <label key={vinculo.idvinculo} className="flex items-center gap-2 cursor-pointer">
+                                <Checkbox
+                                  checked={selectedVinculos.includes(vinculo.idvinculo)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedVinculos([...selectedVinculos, vinculo.idvinculo]);
+                                    } else {
+                                      setSelectedVinculos(selectedVinculos.filter(id => id !== vinculo.idvinculo));
+                                    }
+                                  }}
+                                />
+                                <span className="text-xs text-slate-700">{vinculo.nombre}</span>
+                              </label>
+                            ))}
+                            {vinculos.length === 0 && (
+                              <span className="text-xs text-slate-400">No hay vínculos configurados</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      )}
 
                       <div className="space-y-1">
                         <Label className="text-xs font-medium text-slate-600">Destacado</Label>

@@ -80,6 +80,8 @@ import {
   TipificacionImportResult,
   TipificacionRazonNoPago,
   RazonNoPago,
+  Vinculo,
+  TipificacionVinculo,
   getCanalComunicacion,
   getTipificacionTipo,
   getTipificaciones,
@@ -88,6 +90,8 @@ import {
   createTipificacion,
   getTipificacionRazonesNoPago,
   getRazonNoPago,
+  getVinculos,
+  getTipificacionVinculos,
 } from '../lib/db';
 
 interface DatabaseContextType {
@@ -170,9 +174,12 @@ interface DatabaseContextType {
     idusuario: string;
     estado?: string;
     razonesNoPago?: string[];
+    vinculos?: string[];
   }) => Promise<TipificacionRecord>;
   getTipificacionRazonesNoPago: (idtipificacion: string) => Promise<TipificacionRazonNoPago[]>;
   getRazonNoPago: () => Promise<RazonNoPago[]>;
+  getVinculos: () => Promise<Vinculo[]>;
+  getTipificacionVinculos: (idtipificacion: string) => Promise<TipificacionVinculo[]>;
 }
 
 const DatabaseContext = createContext<DatabaseContextType | null>(null);
@@ -204,6 +211,8 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
     createTipificacion,
     getTipificacionRazonesNoPago,
     getRazonNoPago,
+    getVinculos,
+    getTipificacionVinculos,
   };
 
   return (
